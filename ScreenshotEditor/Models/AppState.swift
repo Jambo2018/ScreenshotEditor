@@ -80,26 +80,53 @@ class AppState: ObservableObject {
     func startScreenCapture() {
         guard let screen = NSScreen.main else { return }
 
+        // Prevent multiple overlays
+        if captureOverlayWindow != nil {
+            print("[HotKey] Overlay already visible, ignoring")
+            return
+        }
+
         // Request permission if needed
         Task { @MainActor in
             if !ScreenCapturer.hasScreenRecordingPermission() {
                 let granted = await ScreenCapturer.requestPermission()
                 if !granted {
                     self.errorMessage = "Screen recording permission denied"
+                    self.isCapturing = false
                     return
                 }
             }
 
             self.isCapturing = true
             self.captureOverlayWindow = CaptureOverlayWindow(screen: screen)
+
+            // Weak self to avoid retain cycles
             self.captureOverlayWindow?.onCaptureConfirmed = { [weak self] rect in
                 self?.captureRegion(rect)
-                self?.captureOverlayWindow?.closeOverlay()
-                self?.captureOverlayWindow = nil
+                // Always reset state on main thread, even if captureRegion fails
+                DispatchQueue.main.async {
+                    self?.captureOverlayWindow?.closeOverlay()
+                    self?.captureOverlayWindow = nil
+                    self?.isCapturing = false
+                }
             }
+
             self.captureOverlayWindow?.onCaptureCancelled = { [weak self] in
-                self?.captureOverlayWindow?.closeOverlay()
-                self?.captureOverlayWindow = nil
+                DispatchQueue.main.async {
+                    self?.captureOverlayWindow?.closeOverlay()
+                    self?.captureOverlayWindow = nil
+                    self?.isCapturing = false
+                }
+            }
+
+            // Timeout safety: force close after 30 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in
+                guard let self = self,
+                      let overlay = self.captureOverlayWindow else { return }
+                print("[HotKey] Timeout - forcing overlay close")
+                overlay.closeOverlay()
+                self.captureOverlayWindow = nil
+                self.isCapturing = false
             }
         }
     }
@@ -107,6 +134,7 @@ class AppState: ObservableObject {
     private func captureRegion(_ rect: CGRect) {
         guard let image = ScreenCapturer.captureRegion(rect) else {
             errorMessage = "Failed to capture screen"
+            // Still reset state even on capture failure
             return
         }
 
@@ -120,10 +148,11 @@ class AppState: ObservableObject {
             image: nsImage
         )
 
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
             self.screenshots.insert(screenshot, at: 0)
             self.selectedScreenshotId = screenshot.id
-            self.isCapturing = false
+            // Note: isCapturing is reset by the caller (onCaptureConfirmed handler)
         }
     }
 

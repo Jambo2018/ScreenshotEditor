@@ -76,10 +76,20 @@ class CaptureOverlayWindow: NSWindow {
     }
 
     func closeOverlay() {
+        // Remove monitor first
         if let monitor = keyMonitor {
             NSEvent.removeMonitor(monitor)
+            keyMonitor = nil
         }
+
+        // Remove from parent screen
         self.orderOut(nil)
+
+        // Make window non-key and remove from runloop
+        self.resignKey()
+
+        // Force close
+        self.close()
     }
 }
 
@@ -126,7 +136,7 @@ struct CaptureOverlayView: View {
 
                 // Instructions
                 VStack {
-                    Text("Drag to select area • ESC to cancel • Enter to capture")
+                    Text("Drag to select area • Release to capture • ESC to cancel")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.white)
                         .padding()
@@ -147,10 +157,28 @@ struct CaptureOverlayView: View {
                         }
                         endPoint = value.location
                     }
-                    .onEnded { _ in
+                    .onEnded { value in
                         isSelecting = false
+
+                        // Auto-confirm on drag end with a valid selection
+                        let rect = selectionRect(in: geometry.size)
+                        if rect.width > 10 && rect.height > 10 {
+                            // Valid selection - auto-confirm after short delay
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                onConfirm?(rect)
+                            }
+                        }
                     }
             )
+            // Tap to confirm (if selection exists)
+            .onTapGesture {
+                if isSelecting {
+                    let rect = selectionRect(in: geometry.size)
+                    if rect.width > 10 && rect.height > 10 {
+                        onConfirm?(rect)
+                    }
+                }
+            }
         }
         .ignoresSafeArea()
     }
