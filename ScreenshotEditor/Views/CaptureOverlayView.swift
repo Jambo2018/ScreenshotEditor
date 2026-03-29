@@ -95,13 +95,14 @@ struct CaptureOverlayView: View {
 
     @State private var startPoint: CGPoint = .zero
     @State private var endPoint: CGPoint = .zero
-    @State var isSelecting: Bool = false
+    @State private var isSelecting: Bool = false
 
     var onConfirm: ((CGRect) -> Void)?
     var onCancel: (() -> Void)?
 
     var body: some View {
         GeometryReader { geometry in
+            let size = geometry.size
             ZStack {
                 // Semi-transparent dark overlay
                 Color.black
@@ -158,18 +159,25 @@ struct CaptureOverlayView: View {
                         }
                     }
                     .onEnded { _ in
+                        print("[Gesture] onEnded called")
                         // Calculate rect before resetting state
-                        let rect = selectionRect(in: geometry.size)
+                        let rect = CGRect(
+                            x: max(0, min(startPoint.x, endPoint.x)),
+                            y: max(0, min(startPoint.y, endPoint.y)),
+                            width: min(abs(endPoint.x - startPoint.x), size.width),
+                            height: min(abs(endPoint.y - startPoint.y), size.height)
+                        )
+                        print("[Gesture] Calculated rect: \(rect.width)x\(rect.height)")
 
                         // Reset selection state
                         isSelecting = false
 
                         // Always notify - either confirm with valid rect or cancel
                         if rect.width > 10 && rect.height > 10 {
-                            print("[Overlay] Valid selection: \(rect.width)x\(rect.height)")
+                            print("[Gesture] Valid selection, calling onConfirm")
                             onConfirm?(rect)
                         } else {
-                            print("[Overlay] Invalid selection, cancelling")
+                            print("[Gesture] Invalid selection, calling onCancel")
                             onCancel?()
                         }
                     }
