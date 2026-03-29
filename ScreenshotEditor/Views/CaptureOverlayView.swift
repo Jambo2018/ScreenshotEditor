@@ -95,7 +95,7 @@ struct CaptureOverlayView: View {
 
     @State private var startPoint: CGPoint = .zero
     @State private var endPoint: CGPoint = .zero
-    @State private var isSelecting: Bool = false
+    @State var isSelecting: Bool = false
 
     var onConfirm: ((CGRect) -> Void)?
     var onCancel: (() -> Void)?
