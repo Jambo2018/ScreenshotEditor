@@ -100,29 +100,28 @@ class AppState: ObservableObject {
             self.isCapturing = true
             self.captureOverlayWindow = CaptureOverlayWindow(screen: screen)
 
-            // Weak self to avoid retain cycles
+            // Use strong self to ensure closure executes
             self.captureOverlayWindow?.onCaptureConfirmed = { [weak self] rect in
-                // Capture the region first (synchronous)
-                self?.captureRegion(rect)
+                guard let self = self else { return }
 
-                // Then immediately close overlay and reset state on main thread
-                DispatchQueue.main.async { [weak self] in
-                    self?.captureOverlayWindow?.closeOverlay()
-                    self?.captureOverlayWindow = nil
-                    self?.isCapturing = false
-                }
+                // Overlay is already closed by CaptureOverlayWindow
+                // Just reset state and capture
+                self.captureOverlayWindow = nil
+                self.isCapturing = false
+
+                // Capture the region
+                self.captureRegion(rect)
             }
 
             self.captureOverlayWindow?.onCaptureCancelled = { [weak self] in
-                DispatchQueue.main.async { [weak self] in
-                    self?.captureOverlayWindow?.closeOverlay()
-                    self?.captureOverlayWindow = nil
-                    self?.isCapturing = false
-                }
+                guard let self = self else { return }
+
+                self.captureOverlayWindow = nil
+                self.isCapturing = false
             }
 
-            // Timeout safety: force close after 30 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in
+            // Timeout safety: force close after 10 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
                 guard let self = self,
                       let overlay = self.captureOverlayWindow else { return }
                 print("[HotKey] Timeout - forcing overlay close")
@@ -134,10 +133,17 @@ class AppState: ObservableObject {
     }
 
     private func captureRegion(_ rect: CGRect) {
+        print("[Capture] Capturing rect: \(rect)")
+
         guard let image = ScreenCapturer.captureRegion(rect) else {
-            errorMessage = "Failed to capture screen"
+            print("[Capture] ERROR: Failed to capture region")
+            DispatchQueue.main.async { [weak self] in
+                self?.errorMessage = "Failed to capture screen"
+            }
             return
         }
+
+        print("[Capture] Success: \(image.width)x\(image.height)")
 
         let nsImage = NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
 
@@ -153,6 +159,7 @@ class AppState: ObservableObject {
             guard let self = self else { return }
             self.screenshots.insert(screenshot, at: 0)
             self.selectedScreenshotId = screenshot.id
+            print("[Capture] Added to screenshots list")
         }
     }
 

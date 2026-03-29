@@ -65,14 +65,20 @@ class CaptureOverlayWindow: NSWindow {
     }
 
     func confirmCapture(_ rect: CGRect? = nil) {
-        // Call callback first - AppState will handle overlay closing
+        // Always close overlay first
+        closeOverlay()
+
+        // Then call callback with rect if available
         if let rect = rect {
             onCaptureConfirmed?(rect)
         }
     }
 
     func cancelCapture() {
-        // Call callback - AppState will handle overlay closing
+        // Always close overlay first
+        closeOverlay()
+
+        // Then call callback
         onCaptureCancelled?()
     }
 
@@ -167,9 +173,13 @@ struct CaptureOverlayView: View {
                         // Reset selection state
                         isSelecting = false
 
-                        // Auto-confirm if we have a valid selection
+                        // Always notify - either confirm with valid rect or cancel
                         if rect.width > 10 && rect.height > 10 {
+                            print("[Overlay] Valid selection: \(rect.width)x\(rect.height)")
                             onConfirm?(rect)
+                        } else {
+                            print("[Overlay] Invalid selection, cancelling")
+                            onCancel?()
                         }
                     }
             )
