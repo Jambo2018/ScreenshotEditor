@@ -102,9 +102,11 @@ class AppState: ObservableObject {
 
             // Weak self to avoid retain cycles
             self.captureOverlayWindow?.onCaptureConfirmed = { [weak self] rect in
+                // Capture the region first (synchronous)
                 self?.captureRegion(rect)
-                // Always reset state on main thread, even if captureRegion fails
-                DispatchQueue.main.async {
+
+                // Then immediately close overlay and reset state on main thread
+                DispatchQueue.main.async { [weak self] in
                     self?.captureOverlayWindow?.closeOverlay()
                     self?.captureOverlayWindow = nil
                     self?.isCapturing = false
@@ -112,7 +114,7 @@ class AppState: ObservableObject {
             }
 
             self.captureOverlayWindow?.onCaptureCancelled = { [weak self] in
-                DispatchQueue.main.async {
+                DispatchQueue.main.async { [weak self] in
                     self?.captureOverlayWindow?.closeOverlay()
                     self?.captureOverlayWindow = nil
                     self?.isCapturing = false
@@ -134,7 +136,6 @@ class AppState: ObservableObject {
     private func captureRegion(_ rect: CGRect) {
         guard let image = ScreenCapturer.captureRegion(rect) else {
             errorMessage = "Failed to capture screen"
-            // Still reset state even on capture failure
             return
         }
 
@@ -152,7 +153,6 @@ class AppState: ObservableObject {
             guard let self = self else { return }
             self.screenshots.insert(screenshot, at: 0)
             self.selectedScreenshotId = screenshot.id
-            // Note: isCapturing is reset by the caller (onCaptureConfirmed handler)
         }
     }
 

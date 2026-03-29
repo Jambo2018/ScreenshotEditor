@@ -65,14 +65,15 @@ class CaptureOverlayWindow: NSWindow {
     }
 
     func confirmCapture(_ rect: CGRect? = nil) {
-        guard let rect = rect else { return }
-        onCaptureConfirmed?(rect)
-        closeOverlay()
+        // Call callback first - AppState will handle overlay closing
+        if let rect = rect {
+            onCaptureConfirmed?(rect)
+        }
     }
 
     func cancelCapture() {
+        // Call callback - AppState will handle overlay closing
         onCaptureCancelled?()
-        closeOverlay()
     }
 
     func closeOverlay() {
@@ -154,31 +155,24 @@ struct CaptureOverlayView: View {
                         if !isSelecting {
                             isSelecting = true
                             startPoint = value.location
+                            endPoint = value.location
+                        } else {
+                            endPoint = value.location
                         }
-                        endPoint = value.location
                     }
-                    .onEnded { value in
+                    .onEnded { _ in
+                        // Calculate rect before resetting state
+                        let rect = selectionRect(in: geometry.size)
+
+                        // Reset selection state
                         isSelecting = false
 
-                        // Auto-confirm on drag end with a valid selection
-                        let rect = selectionRect(in: geometry.size)
+                        // Auto-confirm if we have a valid selection
                         if rect.width > 10 && rect.height > 10 {
-                            // Valid selection - auto-confirm after short delay
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                onConfirm?(rect)
-                            }
+                            onConfirm?(rect)
                         }
                     }
             )
-            // Tap to confirm (if selection exists)
-            .onTapGesture {
-                if isSelecting {
-                    let rect = selectionRect(in: geometry.size)
-                    if rect.width > 10 && rect.height > 10 {
-                        onConfirm?(rect)
-                    }
-                }
-            }
         }
         .ignoresSafeArea()
     }
