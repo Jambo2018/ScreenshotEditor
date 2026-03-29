@@ -36,6 +36,9 @@ class AppState: ObservableObject {
     @Published var showBorder: Bool = false
     @Published var deviceFrame: DeviceFrame = .none
 
+    // Export settings
+    @Published var autoCopyToClipboard: Bool = true
+
     // MARK: - Computed Properties
 
     var selectedScreenshot: Screenshot? {
@@ -199,7 +202,7 @@ class AppState: ObservableObject {
         }
     }
 
-    func exportCurrent(format: ImageFormat = .png) {
+    func exportCurrent(format: ImageFormat = .png, copyToClipboard: Bool? = nil) {
         guard let screenshot = selectedScreenshot,
               let image = screenshot.image else {
             errorMessage = "No screenshot selected"
@@ -222,6 +225,7 @@ class AppState: ObservableObject {
         let currentShowShadow = showShadow
         let currentShowBorder = showBorder
         let currentDeviceFrame = deviceFrame
+        let shouldCopyToClipboard = copyToClipboard ?? autoCopyToClipboard
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else {
@@ -250,7 +254,7 @@ class AppState: ObservableObject {
 
                 DispatchQueue.main.async {
                     self.isExporting = false
-                    self.showSavePanel(data: data, format: format)
+                    self.showSavePanel(data: data, format: format, copyToClipboard: shouldCopyToClipboard)
                 }
             } catch {
                 print("[Export] ERROR: \(error.localizedDescription)")
@@ -262,7 +266,7 @@ class AppState: ObservableObject {
         }
     }
 
-    private func showSavePanel(data: Data, format: ImageFormat) {
+    private func showSavePanel(data: Data, format: ImageFormat, copyToClipboard: Bool = true) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [format.contentType]
         panel.nameFieldStringValue = "Screenshot-\(Date().formatted(.dateTime.year().month().day().hour().minute()))\(format.fileExtension)"
@@ -275,9 +279,14 @@ class AppState: ObservableObject {
 
             do {
                 try data.write(to: url)
-                self.copyToClipboard(data: data)
-                self.errorMessage = nil
-                print("Success: Saved to \(url.path) and copied to clipboard")
+                if copyToClipboard {
+                    self.copyToClipboard(data: data)
+                    self.errorMessage = nil
+                    print("Success: Saved to \(url.path) and copied to clipboard")
+                } else {
+                    self.errorMessage = nil
+                    print("Success: Saved to \(url.path) (clipboard disabled)")
+                }
             } catch {
                 self.errorMessage = "Failed to save: \(error.localizedDescription)"
             }

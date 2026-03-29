@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2.0] - 2026-03-29
+
+### Fixed
+- Auto-copy to clipboard toggle now works correctly — respects user preference in export
+
 ## [0.1.1.0] - 2026-03-29
 
 ### Changed

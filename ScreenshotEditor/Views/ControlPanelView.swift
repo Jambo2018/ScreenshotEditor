@@ -163,7 +163,6 @@ struct ExportSection: View {
     @EnvironmentObject var appState: AppState
     @Binding var exportFormat: ImageFormat
     @State private var isExporting = false
-    @AppStorage("autoCopyToClipboard") private var autoCopyToClipboard = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -196,7 +195,7 @@ struct ExportSection: View {
             .disabled(!appState.hasScreenshot || isExporting)
 
             // Options
-            Toggle("Auto-copy to clipboard", isOn: $autoCopyToClipboard)
+            Toggle("Auto-copy to clipboard", isOn: $appState.autoCopyToClipboard)
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -204,8 +203,8 @@ struct ExportSection: View {
 
     private func export() {
         isExporting = true
-        appState.exportCurrent(format: exportFormat)
-        // Reset local state after export completes (AppState handles the actual timing)
+        appState.exportCurrent(format: exportFormat, copyToClipboard: appState.autoCopyToClipboard)
+        // Reset local state after export completes
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             isExporting = false
         }
