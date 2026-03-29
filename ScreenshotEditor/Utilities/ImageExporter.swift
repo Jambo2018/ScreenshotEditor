@@ -31,10 +31,16 @@ class ImageExporter {
         format: ImageFormat
     ) throws -> Data {
 
+        print("[Export] Starting export...")
+        print("[Export] Source image size: \(sourceImage.size)")
+
         // Get CGImage from NSImage
         guard let cgImage = sourceImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            print("[Export] ERROR: Failed to get CGImage")
             throw ExportError.noImage
         }
+
+        print("[Export] Got CGImage: \(cgImage.width)x\(cgImage.height)")
 
         let ciImage = CIImage(cgImage: cgImage)
 
@@ -43,6 +49,9 @@ class ImageExporter {
         let outputWidth = sourceSize.width + (padding * 2)
         let outputHeight = sourceSize.height + (padding * 2)
         let outputSize = CGSize(width: outputWidth, height: outputHeight)
+
+        print("[Export] Output size: \(outputSize)")
+        print("[Export] Background type: \(backgroundType)")
 
         // Create background
         let backgroundImage = createBackground(
@@ -70,15 +79,22 @@ class ImageExporter {
         let context = CIContext(options: [:])
         let finalBounds = CGRect(origin: .zero, size: outputSize)
 
+        print("[Export] Creating CGImage from composed image...")
+
         guard let renderedCGImage = context.createCGImage(composedImage, from: finalBounds) else {
+            print("[Export] ERROR: Failed to create CGImage from composition")
             throw ExportError.exportFailed
         }
+
+        print("[Export] Created CGImage: \(renderedCGImage.width)x\(renderedCGImage.height)")
 
         // Apply corner radius
         let roundedImage = applyCornerRadius(renderedCGImage, radius: cornerRadius, size: outputSize)
 
         // Apply shadow if needed
         let finalImage = showShadow ? applyShadow(roundedImage, cornerRadius: cornerRadius, size: outputSize) : roundedImage
+
+        print("[Export] Final image processing complete")
 
         // Convert to data
         return try imageToData(finalImage, format: format)
@@ -107,17 +123,20 @@ class ImageExporter {
     }
 
     private static func createGradientBackground(colors: [Color], size: CGSize) -> CIImage {
-        let cgColors = colors.map { $0.cgColor }
+        // Convert SwiftUI Colors to CGColors
+        let cgColors: [CGColor] = colors.map { NSColor($0).cgColor }
 
         guard cgColors.count >= 2 else {
             return createSolidBackground(color: .white, size: size)
         }
 
         let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: cgColors as CFArray, locations: [0.0, 1.0])!
+        guard let gradient = CGGradient(colorsSpace: colorSpace, colors: cgColors as CFArray, locations: [0.0, 1.0]) else {
+            return createSolidBackground(color: .white, size: size)
+        }
 
         let contextSize = CGSize(width: size.width, height: size.height)
-        let context = CGContext(
+        guard let context = CGContext(
             data: nil,
             width: Int(contextSize.width),
             height: Int(contextSize.height),
@@ -125,7 +144,9 @@ class ImageExporter {
             bytesPerRow: 0,
             space: colorSpace,
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )!
+        ) else {
+            return createSolidBackground(color: .white, size: size)
+        }
 
         context.drawLinearGradient(
             gradient,

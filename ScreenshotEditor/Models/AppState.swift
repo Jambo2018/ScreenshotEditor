@@ -82,59 +82,63 @@ class AppState: ObservableObject {
         }
     }
 
-    func exportCurrent(format: ImageFormat = .png, saveLocation: URL? = nil) {
+    func exportCurrent(format: ImageFormat = .png) {
         guard let screenshot = selectedScreenshot,
               let image = screenshot.image else {
             errorMessage = "No screenshot selected"
+            print("[Export] ERROR: No screenshot or image available")
             return
         }
 
+        print("[Export] Starting export from AppState")
+        print("[Export] Background: \(backgroundType), Gradient: \(selectedGradient.name)")
+        print("[Export] Settings: blur=\(blurAmount), padding=\(padding), corner=\(cornerRadius)")
+
         isExporting = true
 
+        let currentBackgroundType = backgroundType
+        let currentGradient = selectedGradient
+        let currentSolidColor = selectedColor
+        let currentBlurAmount = blurAmount
+        let currentPadding = padding
+        let currentCornerRadius = cornerRadius
+        let currentShowShadow = showShadow
+        let currentShowBorder = showBorder
+
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else {
+                print("[Export] ERROR: Self is nil in async block")
+                return
+            }
+
             do {
                 // Export image with current settings
                 let data = try ImageExporter.exportImage(
                     sourceImage: image,
-                    backgroundType: self?.backgroundType ?? .gradient,
-                    gradient: self?.selectedGradient ?? .ocean,
-                    solidColor: self?.selectedColor ?? .white,
-                    blurAmount: self?.blurAmount ?? 0,
-                    padding: self?.padding ?? 40,
-                    cornerRadius: self?.cornerRadius ?? 12,
-                    showShadow: self?.showShadow ?? true,
-                    showBorder: self?.showBorder ?? false,
+                    backgroundType: currentBackgroundType,
+                    gradient: currentGradient,
+                    solidColor: currentSolidColor,
+                    blurAmount: currentBlurAmount,
+                    padding: currentPadding,
+                    cornerRadius: currentCornerRadius,
+                    showShadow: currentShowShadow,
+                    showBorder: currentShowBorder,
                     format: format
                 )
 
-                DispatchQueue.main.async {
-                    self?.isExporting = false
+                print("[Export] Export succeeded, data size: \(data.count) bytes")
 
-                    if let saveLocation = saveLocation {
-                        // Save to specific location
-                        self?.saveToLocation(saveLocation, data: data)
-                    } else {
-                        // Show save panel
-                        self?.showSavePanel(data: data, format: format)
-                    }
+                DispatchQueue.main.async {
+                    self.isExporting = false
+                    self.showSavePanel(data: data, format: format)
                 }
             } catch {
+                print("[Export] ERROR: \(error.localizedDescription)")
                 DispatchQueue.main.async {
-                    self?.isExporting = false
-                    self?.errorMessage = "Export failed: \(error.localizedDescription)"
+                    self.isExporting = false
+                    self.errorMessage = "Export failed: \(error.localizedDescription)"
                 }
             }
-        }
-    }
-
-    private func saveToLocation(_ url: URL, data: Data) {
-        do {
-            try data.write(to: url)
-            // Copy to clipboard
-            copyToClipboard(data: data)
-            showSuccessMessage("Saved and copied to clipboard")
-        } catch {
-            errorMessage = "Failed to save: \(error.localizedDescription)"
         }
     }
 
@@ -144,10 +148,19 @@ class AppState: ObservableObject {
         panel.nameFieldStringValue = "Screenshot-\(Date().formatted(.dateTime.year().month().day().hour().minute()))\(format.fileExtension)"
         panel.canCreateDirectories = true
         panel.showsTagField = false
+        panel.message = "Choose where to save your screenshot"
 
         panel.begin { [weak self] response in
-            guard response == .OK, let url = panel.url else { return }
-            self?.saveToLocation(url, data: data)
+            guard response == .OK, let url = panel.url, let self = self else { return }
+
+            do {
+                try data.write(to: url)
+                self.copyToClipboard(data: data)
+                self.errorMessage = nil
+                print("Success: Saved to \(url.path) and copied to clipboard")
+            } catch {
+                self.errorMessage = "Failed to save: \(error.localizedDescription)"
+            }
         }
     }
 
@@ -155,13 +168,6 @@ class AppState: ObservableObject {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setData(data, forType: .png)
-    }
-
-    private func showSuccessMessage(_ message: String) {
-        // Simple toast notification using errorMessage temporarily
-        errorMessage = nil
-        // In a real app, use a proper toast library or custom view
-        print("Success: \(message)")
     }
 
     func deleteScreenshot(_ screenshot: Screenshot) {
