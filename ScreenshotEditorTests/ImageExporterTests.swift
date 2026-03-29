@@ -51,11 +51,13 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .solid,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 0,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             format: .png
         )
 
@@ -70,11 +72,13 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .solid,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 0,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             format: .jpeg
         )
 
@@ -85,11 +89,13 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .solid,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 0,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             format: .png
         )
         XCTAssertLessThan(data.count, pngData.count, "JPEG should be smaller than PNG")
@@ -105,11 +111,13 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .gradient,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 20,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             format: .png
         )
 
@@ -129,6 +137,7 @@ final class ImageExporterTests: XCTestCase {
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             format: .png
         )
 
@@ -143,11 +152,13 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .blur,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 10,
             padding: 20,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             format: .png
         )
 
@@ -164,11 +175,13 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .solid,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 20,
             cornerRadius: 20,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             format: .png
         )
 
@@ -183,11 +196,13 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .solid,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 20,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             format: .png
         )
 
@@ -204,11 +219,13 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .solid,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 20,
             cornerRadius: 12,
             showShadow: true,
             showBorder: false,
+            deviceFrame: nil,
             format: .png
         )
 
@@ -223,11 +240,13 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .solid,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 20,
             cornerRadius: 12,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             format: .png
         )
 
@@ -244,11 +263,13 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .solid,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 50,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             format: .png
         )
 
@@ -263,11 +284,13 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .solid,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 0,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             format: .png
         )
 
@@ -286,11 +309,13 @@ final class ImageExporterTests: XCTestCase {
                 backgroundType: .gradient,
                 gradient: gradient,
                 solidColor: .white,
+            backgroundImage: nil,
                 blurAmount: 0,
                 padding: 20,
                 cornerRadius: 0,
                 showShadow: false,
                 showBorder: false,
+            deviceFrame: nil,
                 format: .png
             )
             XCTAssertGreaterThan(data.count, 0, "Gradient \(gradient.name) should export successfully")
@@ -308,11 +333,13 @@ final class ImageExporterTests: XCTestCase {
             gradient: .ocean,
             solidColor: .white,
             backgroundImage: nil,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 0,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             deviceFrame: nil,
             format: .webp
         )
@@ -325,11 +352,13 @@ final class ImageExporterTests: XCTestCase {
             gradient: .ocean,
             solidColor: .white,
             backgroundImage: nil,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 0,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             deviceFrame: nil,
             format: .png
         )
@@ -346,6 +375,7 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .solid,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             backgroundImage: nil,
             blurAmount: 0,
             padding: 20,
@@ -367,6 +397,7 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .solid,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             backgroundImage: nil,
             blurAmount: 0,
             padding: 20,
@@ -391,11 +422,13 @@ final class ImageExporterTests: XCTestCase {
             gradient: .ocean,
             solidColor: .white,
             backgroundImage: nil,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 20,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             deviceFrame: .iphone,
             format: .png
         )
@@ -408,11 +441,13 @@ final class ImageExporterTests: XCTestCase {
             gradient: .ocean,
             solidColor: .white,
             backgroundImage: nil,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 20,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             deviceFrame: nil,
             format: .png
         )
@@ -428,11 +463,13 @@ final class ImageExporterTests: XCTestCase {
             gradient: .ocean,
             solidColor: .white,
             backgroundImage: nil,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 20,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             deviceFrame: .macbook,
             format: .png
         )
@@ -451,12 +488,14 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .image,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             backgroundImage: backgroundImage,
             blurAmount: 0,
             padding: 20,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             deviceFrame: nil,
             format: .png
         )
@@ -474,11 +513,13 @@ final class ImageExporterTests: XCTestCase {
             gradient: .ocean,
             solidColor: .white,
             backgroundImage: nil,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 20,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             deviceFrame: nil,
             format: .png
         )
@@ -496,11 +537,13 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .gradient,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 5,
             padding: 40,
             cornerRadius: 12,
             showShadow: true,
             showBorder: false,
+            deviceFrame: nil,
             format: .png
         )
 
