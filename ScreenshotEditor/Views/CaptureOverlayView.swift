@@ -32,6 +32,20 @@ class CaptureOverlayWindow: NSWindow {
         self.backgroundColor = NSColor.black.withAlphaComponent(0.3)
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .fullScreenNone]
 
+        // Set callbacks BEFORE creating hosting view
+        overlayView.onConfirm = { [weak self] rect in
+            print("[Overlay] onConfirm called with rect: \(rect)")
+            guard let self = self else { return }
+            self.closeOverlay()
+            self.onCaptureConfirmed?(rect)
+        }
+        overlayView.onCancel = { [weak self] in
+            print("[Overlay] onCancel called")
+            guard let self = self else { return }
+            self.closeOverlay()
+            self.onCaptureCancelled?()
+        }
+
         self.contentView = NSHostingView(rootView: overlayView)
 
         // Store the isSelecting handler
@@ -39,34 +53,12 @@ class CaptureOverlayWindow: NSWindow {
             return self?.overlayView.isSelecting ?? false
         }
 
-        // Use strong self - window owns the overlay and must stay alive
-        self.overlayView.onConfirm = { rect in
-            print("[Overlay] onConfirm called with rect: \(rect)")
-            // Close overlay FIRST before any other processing
-            self.closeOverlay()
-            // Call callback after closing
-            self.onCaptureConfirmed?(rect)
-        }
-        self.overlayView.onCancel = {
-            print("[Overlay] onCancel called")
-            // Close overlay FIRST
-            self.closeOverlay()
-            // Call callback after closing
-            self.onCaptureCancelled?()
-        }
-
         // Monitor keyboard events
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 { // ESC
                 print("[Overlay] ESC pressed - cancelling")
-                self?.cancelCapture()
-                return nil
-            }
-            if event.keyCode == 36 { // Return
-                if (self?.isSelectingHandler?() ?? false) {
-                    print("[Overlay] Return pressed - confirming")
-                    self?.confirmCapture()
-                }
+                self?.closeOverlay()
+                self?.onCaptureCancelled?()
                 return nil
             }
             return event
@@ -75,21 +67,6 @@ class CaptureOverlayWindow: NSWindow {
         // Make window key and order front
         self.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-    }
-
-    // Called by keyboard events
-    func confirmCapture() {
-        let rect = overlayView.selectionRect(in: self.contentView?.frame.size ?? .zero)
-        print("[Overlay] confirmCapture with rect: \(rect)")
-        closeOverlay()
-        onCaptureConfirmed?(rect)
-    }
-
-    // Called by keyboard events
-    func cancelCapture() {
-        print("[Overlay] cancelCapture")
-        closeOverlay()
-        onCaptureCancelled?()
     }
 
     func closeOverlay() {
