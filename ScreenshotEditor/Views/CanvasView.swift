@@ -34,7 +34,7 @@ struct CanvasView: View {
                         .padding(appState.padding)
 
                     // Device frame overlay (future)
-                    if let frame = appState.deviceFrame, frame != .none {
+                    if appState.deviceFrame != .none {
                         // TODO: Implement device frame overlay
                     }
                 }

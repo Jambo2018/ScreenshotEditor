@@ -34,7 +34,7 @@ class AppState: ObservableObject {
     // Decoration settings
     @Published var showShadow: Bool = true
     @Published var showBorder: Bool = false
-    @Published var deviceFrame: DeviceFrame? = nil
+    @Published var deviceFrame: DeviceFrame = .none
 
     // MARK: - Computed Properties
 

@@ -29,7 +29,7 @@ class ImageExporter {
         cornerRadius: Double,
         showShadow: Bool,
         showBorder: Bool,
-        deviceFrame: DeviceFrame?,
+        deviceFrame: DeviceFrame,
         format: ImageFormat
     ) throws -> Data {
 
@@ -100,10 +100,10 @@ class ImageExporter {
         // Apply shadow if needed
         let shadowedImage = showShadow ? applyShadow(borderedImage, cornerRadius: cornerRadius, size: outputSize) : borderedImage
 
-        // Apply device frame if specified
+        // Apply device frame if needed
         let finalImage: CGImage
-        if let frame = deviceFrame, frame != .none {
-            finalImage = applyDeviceFrame(shadowedImage, frame: frame, size: outputSize)
+        if deviceFrame != .none {
+            finalImage = applyDeviceFrame(shadowedImage, frame: deviceFrame, size: outputSize)
         } else {
             finalImage = shadowedImage
         }
