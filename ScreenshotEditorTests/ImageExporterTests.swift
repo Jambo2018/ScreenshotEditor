@@ -30,11 +30,13 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .gradient,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 40,
             cornerRadius: 12,
             showShadow: true,
             showBorder: false,
+            deviceFrame: nil,
             format: .png
         ))
     }
@@ -305,11 +307,13 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .solid,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 0,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             format: .webp
         )
 
@@ -320,14 +324,166 @@ final class ImageExporterTests: XCTestCase {
             backgroundType: .solid,
             gradient: .ocean,
             solidColor: .white,
+            backgroundImage: nil,
             blurAmount: 0,
             padding: 0,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
+            deviceFrame: nil,
             format: .png
         )
         XCTAssertEqual(webpData.count, pngData.count, "WebP fallback should produce identical PNG data")
+    }
+
+    // MARK: - Border
+
+    func testExportWithBorder() throws {
+        let testImage = createTestImage()
+
+        let data = try ImageExporter.exportImage(
+            sourceImage: testImage,
+            backgroundType: .solid,
+            gradient: .ocean,
+            solidColor: .white,
+            backgroundImage: nil,
+            blurAmount: 0,
+            padding: 20,
+            cornerRadius: 0,
+            showShadow: false,
+            showBorder: true,
+            deviceFrame: nil,
+            format: .png
+        )
+
+        XCTAssertGreaterThan(data.count, 0, "Export with border should succeed")
+    }
+
+    func testExportWithBorderAndCornerRadius() throws {
+        let testImage = createTestImage()
+
+        let data = try ImageExporter.exportImage(
+            sourceImage: testImage,
+            backgroundType: .solid,
+            gradient: .ocean,
+            solidColor: .white,
+            backgroundImage: nil,
+            blurAmount: 0,
+            padding: 20,
+            cornerRadius: 12,
+            showShadow: false,
+            showBorder: true,
+            deviceFrame: nil,
+            format: .png
+        )
+
+        XCTAssertGreaterThan(data.count, 0, "Export with border and corner radius should succeed")
+    }
+
+    // MARK: - Device Frame
+
+    func testExportWithIPhoneFrame() throws {
+        let testImage = createTestImage()
+
+        let data = try ImageExporter.exportImage(
+            sourceImage: testImage,
+            backgroundType: .solid,
+            gradient: .ocean,
+            solidColor: .white,
+            backgroundImage: nil,
+            blurAmount: 0,
+            padding: 20,
+            cornerRadius: 0,
+            showShadow: false,
+            showBorder: false,
+            deviceFrame: .iphone,
+            format: .png
+        )
+
+        XCTAssertGreaterThan(data.count, 0, "Export with iPhone frame should succeed")
+        // Frame should make image larger
+        let noFrameData = try ImageExporter.exportImage(
+            sourceImage: testImage,
+            backgroundType: .solid,
+            gradient: .ocean,
+            solidColor: .white,
+            backgroundImage: nil,
+            blurAmount: 0,
+            padding: 20,
+            cornerRadius: 0,
+            showShadow: false,
+            showBorder: false,
+            deviceFrame: nil,
+            format: .png
+        )
+        XCTAssertGreaterThan(data.count, noFrameData.count, "iPhone frame should add visual elements")
+    }
+
+    func testExportWithMacBookFrame() throws {
+        let testImage = createTestImage()
+
+        let data = try ImageExporter.exportImage(
+            sourceImage: testImage,
+            backgroundType: .solid,
+            gradient: .ocean,
+            solidColor: .white,
+            backgroundImage: nil,
+            blurAmount: 0,
+            padding: 20,
+            cornerRadius: 0,
+            showShadow: false,
+            showBorder: false,
+            deviceFrame: .macbook,
+            format: .png
+        )
+
+        XCTAssertGreaterThan(data.count, 0, "Export with MacBook frame should succeed")
+    }
+
+    // MARK: - Image Background
+
+    func testExportWithImageBackground() throws {
+        let testImage = createTestImage()
+        let backgroundImage = createTestImage(width: 200, height: 200)
+
+        let data = try ImageExporter.exportImage(
+            sourceImage: testImage,
+            backgroundType: .image,
+            gradient: .ocean,
+            solidColor: .white,
+            backgroundImage: backgroundImage,
+            blurAmount: 0,
+            padding: 20,
+            cornerRadius: 0,
+            showShadow: false,
+            showBorder: false,
+            deviceFrame: nil,
+            format: .png
+        )
+
+        XCTAssertGreaterThan(data.count, 0, "Export with image background should succeed")
+    }
+
+    func testExportWithImageBackgroundFallback() throws {
+        let testImage = createTestImage()
+
+        // nil background image should fallback to solid color
+        let data = try ImageExporter.exportImage(
+            sourceImage: testImage,
+            backgroundType: .image,
+            gradient: .ocean,
+            solidColor: .white,
+            backgroundImage: nil,
+            blurAmount: 0,
+            padding: 20,
+            cornerRadius: 0,
+            showShadow: false,
+            showBorder: false,
+            deviceFrame: nil,
+            format: .png
+        )
+
+        XCTAssertGreaterThan(data.count, 0, "Export with nil image background should fallback to solid")
     }
 
     // MARK: - Combined Settings
