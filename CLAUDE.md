@@ -16,6 +16,63 @@
 - When adding a conditional (if/else, switch), write tests for BOTH paths
 - Never commit code that makes existing tests fail
 
+## Automated Development Flow (gstack multi-agent)
+
+This project supports fully automated multi-role development using gstack skills.
+
+### Available Roles
+
+| Role | Command | Description |
+|------|---------|-------------|
+| **Product/CEO** | `/plan-ceo-review` | Scope, strategy, product decisions |
+| **Design** | `/plan-design-review` | UI/UX review, visual consistency |
+| **Engineering** | `/plan-eng-review` | Architecture, code quality, tests |
+| **Auto-Review** | `/autoplan` | Run all 3 reviews in sequence |
+| **QA** | `/qa` | Test → fix → verify loop |
+| **Investigate** | `/investigate` | Root cause debugging |
+| **Ship** | `/ship` | Full ship workflow |
+| **Security** | `/cso` | OWASP security audit |
+| **Docs** | `/document-release` | Auto-update documentation |
+
+### Workflow: Complete Automation
+
+**For new features:**
+```
+1. /office-hours          # Understand the problem space
+2. /plan-ceo-review       # Define scope & strategy
+3. /plan-design-review    # Design the UX
+4. /plan-eng-review       # Plan architecture
+5. [Implement feature]
+6. /qa                    # Auto test + fix loop
+7. /ship                  # Commit, PR, merge
+8. /document-release      # Update docs
+```
+
+**For bug fixes:**
+```
+1. /investigate           # Root cause analysis
+2. [Apply fix]
+3. /qa                    # Verify + regression tests
+4. /ship                  # Ship the fix
+```
+
+**For code review:**
+```
+1. /review                # Pre-landing review
+2. /autoplan              # Full review gauntlet (optional)
+3. /ship                  # Merge if all clear
+```
+
+### Pre-Ship Automation
+
+Before every `/ship`, the following runs automatically:
+1. **Test Suite** - All XCTest tests must pass
+2. **Pre-Landing Review** - Code quality checklist
+3. **Coverage Audit** - Ensure new code is tested
+4. **Build Verification** - App compiles successfully
+
+If any step fails, auto-fix is attempted. If fix fails, user is notified.
+
 ## Project Structure
 
 ```
