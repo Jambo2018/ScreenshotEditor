@@ -33,9 +33,10 @@ struct CanvasView: View {
                         )
                         .padding(appState.padding)
 
-                    // Device frame overlay (future)
+                    // Device frame overlay
                     if appState.deviceFrame != .none {
-                        // TODO: Implement device frame overlay
+                        deviceFrameOverlay(for: image, frame: appState.deviceFrame)
+                            .allowsHitTesting(false)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -157,6 +158,88 @@ struct WelcomeView: View {
             .font(.caption)
             .foregroundColor(.gray)
         }
+    }
+}
+
+// MARK: - Device Frame Overlay
+
+extension CanvasView {
+    @ViewBuilder
+    private func deviceFrameOverlay(for image: NSImage, frame: DeviceFrame) -> some View {
+        switch frame {
+        case .none:
+            EmptyView()
+
+        case .iphone:
+            iPhoneFrameOverlay(for: image)
+
+        case .macbook:
+            MacBookFrameOverlay(for: image)
+        }
+    }
+
+    private func iPhoneFrameOverlay(for image: NSImage) -> some View {
+        ZStack {
+            // Device body
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.black)
+
+            // Screen area with image
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.clear)
+                .overlay(
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .cornerRadius(16)
+                        .clipped()
+                )
+                .padding(.horizontal, 20)
+                .padding(.vertical, 30)
+
+            // Top notch
+            Capsule()
+                .fill(Color.black)
+                .frame(width: 100, height: 20)
+                .offset(y: -140)
+
+            // Bottom home indicator
+            Capsule()
+                .fill(Color.black.opacity(0.8))
+                .frame(width: 100, height: 4)
+                .offset(y: 140)
+        }
+        .aspectRatio(9 / 19.5, contentMode: .fit)
+    }
+
+    private func MacBookFrameOverlay(for image: NSImage) -> some View {
+        ZStack {
+            // Device body (dark gray)
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.gray.opacity(0.8))
+
+            // Screen area
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.clear)
+                .overlay(
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .cornerRadius(8)
+                        .clipped()
+                )
+                .padding(.horizontal, 15)
+                .padding(.top, 20)
+                .padding(.bottom, 40) // MacBook chin
+
+            // Bottom chin detail line
+            Rectangle()
+                .fill(Color.gray.opacity(0.5))
+                .frame(height: 1)
+                .padding(.horizontal, 30)
+                .offset(y: 100)
+        }
+        .aspectRatio(16 / 10, contentMode: .fit)
     }
 }
 

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3.0] - 2026-03-29
+
+### Added
+- Device frame overlay preview in CanvasView with iPhone (notch, home indicator) and MacBook (chin) styles
+
 ## [0.1.2.0] - 2026-03-29
 
 ### Fixed
