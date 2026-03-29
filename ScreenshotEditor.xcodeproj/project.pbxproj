@@ -18,6 +18,9 @@
 		A1000009 /* Screenshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009 /* Screenshot.swift */; };
 		A100000A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A200000A /* Assets.xcassets */; };
 		A100000B /* ImageExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000C /* ImageExporter.swift */; };
+		A1000010 /* ScreenCapturer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000010 /* ScreenCapturer.swift */; };
+		A1000011 /* GlobalHotKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000011 /* GlobalHotKey.swift */; };
+		A1000012 /* CaptureOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000012 /* CaptureOverlayView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,6 +36,9 @@
 		A200000A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A200000B /* Preview Content */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "Preview Content"; sourceTree = "<group>"; };
 		A200000C /* ImageExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageExporter.swift; sourceTree = "<group>"; };
+		A2000010 /* ScreenCapturer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCapturer.swift; sourceTree = "<group>"; };
+		A2000011 /* GlobalHotKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotKey.swift; sourceTree = "<group>"; };
+		A2000012 /* CaptureOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureOverlayView.swift; sourceTree = "<group>"; };
 		A3000001 /* ScreenshotEditor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScreenshotEditor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -85,6 +91,7 @@
 				A2000005 /* ControlPanelView.swift */,
 				A2000006 /* ErrorView.swift */,
 				A2000007 /* SettingsView.swift */,
+				A2000012 /* CaptureOverlayView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -102,6 +109,8 @@
 			isa = PBXGroup;
 			children = (
 				A200000C /* ImageExporter.swift */,
+				A2000010 /* ScreenCapturer.swift */,
+				A2000011 /* GlobalHotKey.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -185,6 +194,9 @@
 				A1000008 /* AppState.swift in Sources */,
 				A1000009 /* Screenshot.swift in Sources */,
 				A100000B /* ImageExporter.swift in Sources */,
+				A1000010 /* ScreenCapturer.swift in Sources */,
+				A1000011 /* GlobalHotKey.swift in Sources */,
+				A1000012 /* CaptureOverlayView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

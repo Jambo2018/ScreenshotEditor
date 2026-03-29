@@ -30,7 +30,9 @@ struct ScreenshotListView: View {
                                 appState.deleteScreenshot(screenshot)
                             }
                             Button("Show in Finder") {
-                                NSWorkspace.shared.selectFile(screenshot.sourceURL.path, inFileViewerRootedAtPath: "")
+                                if let url = screenshot.sourceURL {
+                                    NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
+                                }
                             }
                         }
                 }

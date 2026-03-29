@@ -17,6 +17,11 @@ class AppState: ObservableObject {
     @Published var selectedScreenshotId: UUID?
     @Published var isExporting: Bool = false
     @Published var errorMessage: String?
+    @Published var isCapturing: Bool = false
+
+    // Screen capture
+    private var hotKeyMonitor: GlobalHotKeyMonitor?
+    private var captureOverlayWindow: CaptureOverlayWindow?
 
     // Background settings
     @Published var backgroundType: BackgroundType = .gradient
@@ -45,6 +50,81 @@ class AppState: ObservableObject {
 
     init() {
         loadFromiCloud()
+        setupHotKey()
+    }
+
+    // MARK: - Screen Capture Setup
+
+    private func setupHotKey() {
+        print("[HotKey] Setting up hotkey listener...")
+
+        // Check accessibility permission
+        if !GlobalHotKeyMonitor.hasAccessibilityPermission() {
+            print("[HotKey] WARNING: Accessibility permission not granted!")
+            print("[HotKey] Please grant accessibility permission in System Settings > Privacy & Security > Accessibility")
+        } else {
+            print("[HotKey] Accessibility permission granted")
+        }
+
+        hotKeyMonitor = GlobalHotKeyMonitor()
+        hotKeyMonitor?.register(
+            key: .k,
+            modifiers: [.command, .shift]
+        ) { [weak self] in
+            print("[HotKey] Hotkey callback triggered!")
+            self?.startScreenCapture()
+        }
+        print("[HotKey] Hotkey registered: Cmd+Shift+K")
+    }
+
+    func startScreenCapture() {
+        guard let screen = NSScreen.main else { return }
+
+        // Request permission if needed
+        Task { @MainActor in
+            if !ScreenCapturer.hasScreenRecordingPermission() {
+                let granted = await ScreenCapturer.requestPermission()
+                if !granted {
+                    self.errorMessage = "Screen recording permission denied"
+                    return
+                }
+            }
+
+            self.isCapturing = true
+            self.captureOverlayWindow = CaptureOverlayWindow(screen: screen)
+            self.captureOverlayWindow?.onCaptureConfirmed = { [weak self] rect in
+                self?.captureRegion(rect)
+                self?.captureOverlayWindow?.closeOverlay()
+                self?.captureOverlayWindow = nil
+            }
+            self.captureOverlayWindow?.onCaptureCancelled = { [weak self] in
+                self?.captureOverlayWindow?.closeOverlay()
+                self?.captureOverlayWindow = nil
+            }
+        }
+    }
+
+    private func captureRegion(_ rect: CGRect) {
+        guard let image = ScreenCapturer.captureRegion(rect) else {
+            errorMessage = "Failed to capture screen"
+            return
+        }
+
+        let nsImage = NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
+
+        let screenshot = Screenshot(
+            id: UUID(),
+            name: "Screenshot-\(Date().formatted(.dateTime.hour().minute().second()))",
+            sourceURL: nil,
+            createdAt: Date(),
+            image: nsImage
+        )
+
+        DispatchQueue.main.async {
+            self.screenshots.insert(screenshot, at: 0)
+            self.selectedScreenshotId = screenshot.id
+            self.isCapturing = false
+        }
     }
 
     // MARK: - Actions
@@ -104,6 +184,7 @@ class AppState: ObservableObject {
         let currentCornerRadius = cornerRadius
         let currentShowShadow = showShadow
         let currentShowBorder = showBorder
+        let currentDeviceFrame = deviceFrame
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else {
@@ -118,11 +199,13 @@ class AppState: ObservableObject {
                     backgroundType: currentBackgroundType,
                     gradient: currentGradient,
                     solidColor: currentSolidColor,
+                    backgroundImage: nil, // TODO: Add backgroundImage support
                     blurAmount: currentBlurAmount,
                     padding: currentPadding,
                     cornerRadius: currentCornerRadius,
                     showShadow: currentShowShadow,
                     showBorder: currentShowBorder,
+                    deviceFrame: currentDeviceFrame,
                     format: format
                 )
 

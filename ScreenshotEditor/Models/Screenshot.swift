@@ -11,7 +11,7 @@ import AppKit
 struct Screenshot: Identifiable {
     let id: UUID
     let name: String
-    let sourceURL: URL
+    let sourceURL: URL?
     let createdAt: Date
     let image: NSImage?
 

@@ -11,6 +11,7 @@ import SwiftUI
 @main
 struct ScreenshotEditorApp: App {
     @StateObject private var appState = AppState()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
         WindowGroup {
@@ -21,6 +22,11 @@ struct ScreenshotEditorApp: App {
         .windowStyle(.automatic)
         .commands {
             CommandGroup(replacing: .newItem) {
+                Button("Capture Screen...") {
+                    appState.startScreenCapture()
+                }
+                .keyboardShortcut("k", modifiers: [.command, .shift])
+
                 Button("Import Screenshot...") {
                     appState.importScreenshot()
                 }
@@ -36,5 +42,15 @@ struct ScreenshotEditorApp: App {
         Settings {
             SettingsView()
         }
+    }
+}
+
+// MARK: - App Delegate
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Activate the app on launch to receive global events
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
     }
 }

@@ -23,11 +23,13 @@ class ImageExporter {
         backgroundType: BackgroundType,
         gradient: GradientPreset,
         solidColor: Color,
+        backgroundImage: NSImage?,
         blurAmount: Double,
         padding: Double,
         cornerRadius: Double,
         showShadow: Bool,
         showBorder: Bool,
+        deviceFrame: DeviceFrame?,
         format: ImageFormat
     ) throws -> Data {
 
@@ -58,6 +60,7 @@ class ImageExporter {
             type: backgroundType,
             gradient: gradient,
             solidColor: solidColor,
+            backgroundImage: backgroundImage,
             size: outputSize,
             blurAmount: blurAmount
         )
@@ -91,8 +94,11 @@ class ImageExporter {
         // Apply corner radius
         let roundedImage = applyCornerRadius(renderedCGImage, radius: cornerRadius, size: outputSize)
 
+        // Apply border if needed
+        let borderedImage = showBorder ? applyBorder(roundedImage, radius: cornerRadius, size: outputSize) : roundedImage
+
         // Apply shadow if needed
-        let finalImage = showShadow ? applyShadow(roundedImage, cornerRadius: cornerRadius, size: outputSize) : roundedImage
+        let finalImage = showShadow ? applyShadow(borderedImage, cornerRadius: cornerRadius, size: outputSize) : borderedImage
 
         print("[Export] Final image processing complete")
 
@@ -106,6 +112,7 @@ class ImageExporter {
         type: BackgroundType,
         gradient: GradientPreset,
         solidColor: Color,
+        backgroundImage: NSImage?,
         size: CGSize,
         blurAmount: Double
     ) -> CIImage {
@@ -118,7 +125,7 @@ class ImageExporter {
         case .blur:
             return createBlurBackground(blurAmount: blurAmount, size: size)
         case .image:
-            return createGradientBackground(colors: gradient.colors, size: size)
+            return createImageBackground(backgroundImage: backgroundImage, size: size)
         }
     }
 
@@ -210,6 +217,40 @@ class ImageExporter {
         context.addPath(path)
         context.clip()
         context.draw(image, in: CGRect(origin: .zero, size: size))
+
+        return context.makeImage()!
+    }
+
+    // MARK: - Border
+
+    private static func applyBorder(_ image: CGImage, radius: Double, size: CGSize) -> CGImage {
+        let borderWidth: CGFloat = 2
+
+        let context = CGContext(
+            data: nil,
+            width: image.width,
+            height: image.height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )!
+
+        // Draw the image
+        context.draw(image, in: CGRect(origin: .zero, size: size))
+
+        // Draw border path
+        let borderPath = CGPath(
+            roundedRect: CGRect(origin: .zero, size: size),
+            cornerWidth: radius,
+            cornerHeight: radius,
+            transform: nil
+        )
+
+        context.addPath(borderPath)
+        context.setStrokeColor(NSColor.white.withAlphaComponent(0.5).cgColor)
+        context.setLineWidth(borderWidth)
+        context.strokePath()
 
         return context.makeImage()!
     }
