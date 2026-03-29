@@ -12,9 +12,9 @@ class CaptureOverlayWindow: NSWindow {
     var onCaptureConfirmed: ((CGRect) -> Void)?
     var onCaptureCancelled: (() -> Void)?
 
-    private var overlayView: CaptureOverlayView
+    private var overlayView: CaptureOverlayView?
     private var keyMonitor: Any?
-    private var isSelectingHandler: (() -> Bool)?
+    private var isClosing = false
 
     init(screen: NSScreen) {
         overlayView = CaptureOverlayView()
@@ -32,62 +32,81 @@ class CaptureOverlayWindow: NSWindow {
         self.backgroundColor = NSColor.black.withAlphaComponent(0.3)
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .fullScreenNone]
 
-        // Set callbacks BEFORE creating hosting view
-        overlayView.onConfirm = { [weak self] rect in
-            print("[Overlay] onConfirm called with rect: \(rect)")
-            guard let self = self else { return }
-            self.closeOverlay()
-            self.onCaptureConfirmed?(rect)
-        }
-        overlayView.onCancel = { [weak self] in
-            print("[Overlay] onCancel called")
-            guard let self = self else { return }
-            self.closeOverlay()
-            self.onCaptureCancelled?()
+        overlayView?.onConfirm = { [weak self] rect in
+            self?.handleCaptureConfirmed(rect)
         }
 
-        self.contentView = NSHostingView(rootView: overlayView)
-
-        // Store the isSelecting handler
-        isSelectingHandler = { [weak self] in
-            return self?.overlayView.isSelecting ?? false
+        overlayView?.onCancel = { [weak self] in
+            self?.handleCaptureCancelled()
         }
 
-        // Monitor keyboard events
+        guard let view = overlayView else { return }
+        self.contentView = NSHostingView(rootView: view)
+
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 { // ESC
-                print("[Overlay] ESC pressed - cancelling")
-                self?.closeOverlay()
-                self?.onCaptureCancelled?()
+                self?.handleCaptureCancelled()
                 return nil
             }
             return event
         }
 
-        // Make window key and order front
         self.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    func closeOverlay() {
-        print("[Overlay] Closing overlay...")
+    deinit {
+        #if DEBUG
+        print("[Overlay] deinitialized")
+        #endif
+    }
 
-        // Remove monitor first
+    private func handleCaptureConfirmed(_ rect: CGRect) {
+        guard !isClosing else { return }
+        isClosing = true
+
+        cleanupResources()
+
+        // Close window first
+        self.contentView = nil
+        overlayView = nil
+        self.orderOut(nil)
+        self.close()
+
+        // Notify parent on next run loop to ensure window close is processed
+        DispatchQueue.main.async { [weak self] in
+            self?.onCaptureConfirmed?(rect)
+        }
+    }
+
+    private func handleCaptureCancelled() {
+        guard !isClosing else { return }
+        isClosing = true
+
+        cleanupResources()
+
+        // Close window first
+        self.contentView = nil
+        overlayView = nil
+        self.orderOut(nil)
+        self.close()
+
+        // Notify parent on next run loop
+        DispatchQueue.main.async { [weak self] in
+            self?.onCaptureCancelled?()
+        }
+    }
+
+    private func cleanupResources() {
+        onCaptureConfirmed = nil
+        onCaptureCancelled = nil
+        overlayView?.onConfirm = nil
+        overlayView?.onCancel = nil
+
         if let monitor = keyMonitor {
             NSEvent.removeMonitor(monitor)
             keyMonitor = nil
         }
-
-        // Remove from parent screen
-        self.orderOut(nil)
-
-        // Make window non-key and remove from runloop
-        self.resignKey()
-
-        // Force close
-        self.close()
-
-        print("[Overlay] Overlay closed")
     }
 }
 
@@ -102,7 +121,6 @@ struct CaptureOverlayView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let size = geometry.size
             ZStack {
                 // Semi-transparent dark overlay
                 Color.black
@@ -158,28 +176,21 @@ struct CaptureOverlayView: View {
                             endPoint = value.location
                         }
                     }
-                    .onEnded { _ in
+                    .onEnded { value in
                         print("[Gesture] onEnded called")
-                        // Calculate rect before resetting state
+
                         let rect = CGRect(
                             x: max(0, min(startPoint.x, endPoint.x)),
                             y: max(0, min(startPoint.y, endPoint.y)),
-                            width: min(abs(endPoint.x - startPoint.x), size.width),
-                            height: min(abs(endPoint.y - startPoint.y), size.height)
+                            width: abs(endPoint.x - startPoint.x),
+                            height: abs(endPoint.y - startPoint.y)
                         )
                         print("[Gesture] Calculated rect: \(rect.width)x\(rect.height)")
 
-                        // Reset selection state
                         isSelecting = false
 
-                        // Always notify - either confirm with valid rect or cancel
-                        if rect.width > 10 && rect.height > 10 {
-                            print("[Gesture] Valid selection, calling onConfirm")
-                            onConfirm?(rect)
-                        } else {
-                            print("[Gesture] Invalid selection, calling onCancel")
-                            onCancel?()
-                        }
+                        // Always call onConfirm - let parent decide if rect is valid
+                        onConfirm?(rect)
                     }
             )
         }

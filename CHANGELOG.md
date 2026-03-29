@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.1.0] - 2026-03-29
+
+### Changed
+- Cleanup debug logging in AppState and CaptureOverlayWindow
+- Improved capture overlay callback handling for better resource cleanup
+- Made `isSelecting` property internal for callback handler compatibility
+- Better window lifecycle management in CaptureOverlayWindow (explicit cleanup on confirm/cancel)
+- Removed redundant print statements from hotkey setup and capture flow
+
 ## [0.1.0.0] - 2026-03-29
 
 ### Added

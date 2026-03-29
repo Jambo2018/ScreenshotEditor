@@ -56,14 +56,11 @@ class AppState: ObservableObject {
     // MARK: - Screen Capture Setup
 
     private func setupHotKey() {
-        print("[HotKey] Setting up hotkey listener...")
-
         // Check accessibility permission
         if !GlobalHotKeyMonitor.hasAccessibilityPermission() {
+            #if DEBUG
             print("[HotKey] WARNING: Accessibility permission not granted!")
-            print("[HotKey] Please grant accessibility permission in System Settings > Privacy & Security > Accessibility")
-        } else {
-            print("[HotKey] Accessibility permission granted")
+            #endif
         }
 
         hotKeyMonitor = GlobalHotKeyMonitor()
@@ -71,10 +68,8 @@ class AppState: ObservableObject {
             key: .k,
             modifiers: [.command, .shift]
         ) { [weak self] in
-            print("[HotKey] Hotkey callback triggered!")
             self?.startScreenCapture()
         }
-        print("[HotKey] Hotkey registered: Cmd+Shift+K")
     }
 
     func startScreenCapture() {
@@ -82,7 +77,6 @@ class AppState: ObservableObject {
 
         // Prevent multiple overlays
         if captureOverlayWindow != nil {
-            print("[HotKey] Overlay already visible, ignoring")
             return
         }
 
@@ -98,78 +92,75 @@ class AppState: ObservableObject {
             }
 
             self.isCapturing = true
-            self.captureOverlayWindow = CaptureOverlayWindow(screen: screen)
+            let overlayWindow = CaptureOverlayWindow(screen: screen)
+            self.captureOverlayWindow = overlayWindow
 
-            print("[AppState] Overlay created, setting up callbacks")
+            // Capture overlay callbacks
+            overlayWindow.onCaptureConfirmed = { [weak self] rect in
+                guard let self = self else { return }
 
-            // Use strong self to ensure closure executes
-            self.captureOverlayWindow?.onCaptureConfirmed = { [weak self] rect in
-                print("[AppState] onCaptureConfirmed called with rect: \(rect)")
-                guard let self = self else {
-                    print("[AppState] ERROR: self is nil in onCaptureConfirmed")
-                    return
-                }
-
-                // Overlay is already closed by CaptureOverlayWindow
-                // Just reset state and capture
+                // Reset state
                 self.captureOverlayWindow = nil
                 self.isCapturing = false
 
-                // Capture the region
+                // Activate main app window
+                NSApp.activate(ignoringOtherApps: true)
+
+                // Capture on background thread
                 self.captureRegion(rect)
             }
 
-            self.captureOverlayWindow?.onCaptureCancelled = { [weak self] in
-                print("[AppState] onCaptureCancelled called")
-                guard let self = self else {
-                    print("[AppState] ERROR: self is nil in onCaptureCancelled")
-                    return
-                }
+            overlayWindow.onCaptureCancelled = { [weak self] in
+                guard let self = self else { return }
 
+                // Reset state
                 self.captureOverlayWindow = nil
                 self.isCapturing = false
+
+                // Activate main app window
+                NSApp.activate(ignoringOtherApps: true)
             }
 
             // Timeout safety: force close after 10 seconds
             DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
                 guard let self = self,
                       let overlay = self.captureOverlayWindow else { return }
-                print("[HotKey] Timeout - forcing overlay close")
-                overlay.closeOverlay()
+                overlay.onCaptureCancelled?()
                 self.captureOverlayWindow = nil
                 self.isCapturing = false
             }
         }
     }
 
+    // MARK: - Screen Capture
+
     private func captureRegion(_ rect: CGRect) {
-        print("[Capture] Capturing rect: \(rect)")
-
-        guard let image = ScreenCapturer.captureRegion(rect) else {
-            print("[Capture] ERROR: Failed to capture region")
-            DispatchQueue.main.async { [weak self] in
-                self?.errorMessage = "Failed to capture screen"
-            }
-            return
-        }
-
-        print("[Capture] Success: \(image.width)x\(image.height)")
-
-        let nsImage = NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
-
-        let screenshot = Screenshot(
-            id: UUID(),
-            name: "Screenshot-\(Date().formatted(.dateTime.hour().minute().second()))",
-            sourceURL: nil,
-            createdAt: Date(),
-            image: nsImage
-        )
-
-        DispatchQueue.main.async { [weak self] in
+        // Capture on background thread to avoid blocking UI
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            self.screenshots.insert(screenshot, at: 0)
-            self.selectedScreenshotId = screenshot.id
-            print("[Capture] Added to screenshots list")
+
+            guard let image = ScreenCapturer.captureRegion(rect) else {
+                DispatchQueue.main.async {
+                    self.errorMessage = "Failed to capture screen"
+                }
+                return
+            }
+
+            let nsImage = NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
+
+            let screenshot = Screenshot(
+                id: UUID(),
+                name: "Screenshot-\(Date().formatted(.dateTime.hour().minute().second()))",
+                sourceURL: nil,
+                createdAt: Date(),
+                image: nsImage
+            )
+
+            // Update UI on main thread
+            DispatchQueue.main.async {
+                self.screenshots.insert(screenshot, at: 0)
+                self.selectedScreenshotId = screenshot.id
+            }
         }
     }
 
