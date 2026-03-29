@@ -39,21 +39,34 @@ class CaptureOverlayWindow: NSWindow {
             return self?.overlayView.isSelecting ?? false
         }
 
-        self.overlayView.onConfirm = { [weak self] rect in
-            self?.confirmCapture(rect)
+        // Use strong self - window owns the overlay and must stay alive
+        self.overlayView.onConfirm = { rect in
+            print("[Overlay] onConfirm called with rect: \(rect)")
+            // Close overlay FIRST before any other processing
+            self.closeOverlay()
+            // Call callback after closing
+            self.onCaptureConfirmed?(rect)
         }
-        self.overlayView.onCancel = { [weak self] in
-            self?.cancelCapture()
+        self.overlayView.onCancel = {
+            print("[Overlay] onCancel called")
+            // Close overlay FIRST
+            self.closeOverlay()
+            // Call callback after closing
+            self.onCaptureCancelled?()
         }
 
         // Monitor keyboard events
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 { // ESC
+                print("[Overlay] ESC pressed - cancelling")
                 self?.cancelCapture()
                 return nil
             }
-            if event.keyCode == 36 && (self?.isSelectingHandler?() ?? false) { // Return
-                self?.confirmCapture()
+            if event.keyCode == 36 { // Return
+                if (self?.isSelectingHandler?() ?? false) {
+                    print("[Overlay] Return pressed - confirming")
+                    self?.confirmCapture()
+                }
                 return nil
             }
             return event
@@ -64,25 +77,24 @@ class CaptureOverlayWindow: NSWindow {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    func confirmCapture(_ rect: CGRect? = nil) {
-        // Always close overlay first
+    // Called by keyboard events
+    func confirmCapture() {
+        let rect = overlayView.selectionRect(in: self.contentView?.frame.size ?? .zero)
+        print("[Overlay] confirmCapture with rect: \(rect)")
         closeOverlay()
-
-        // Then call callback with rect if available
-        if let rect = rect {
-            onCaptureConfirmed?(rect)
-        }
+        onCaptureConfirmed?(rect)
     }
 
+    // Called by keyboard events
     func cancelCapture() {
-        // Always close overlay first
+        print("[Overlay] cancelCapture")
         closeOverlay()
-
-        // Then call callback
         onCaptureCancelled?()
     }
 
     func closeOverlay() {
+        print("[Overlay] Closing overlay...")
+
         // Remove monitor first
         if let monitor = keyMonitor {
             NSEvent.removeMonitor(monitor)
@@ -97,6 +109,8 @@ class CaptureOverlayWindow: NSWindow {
 
         // Force close
         self.close()
+
+        print("[Overlay] Overlay closed")
     }
 }
 
@@ -187,7 +201,7 @@ struct CaptureOverlayView: View {
         .ignoresSafeArea()
     }
 
-    private func selectionRect(in size: CGSize) -> CGRect {
+    func selectionRect(in size: CGSize) -> CGRect {
         let minX = min(startPoint.x, endPoint.x)
         let minY = min(startPoint.y, endPoint.y)
         let maxX = max(startPoint.x, endPoint.x)

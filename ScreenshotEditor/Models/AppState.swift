@@ -100,9 +100,15 @@ class AppState: ObservableObject {
             self.isCapturing = true
             self.captureOverlayWindow = CaptureOverlayWindow(screen: screen)
 
+            print("[AppState] Overlay created, setting up callbacks")
+
             // Use strong self to ensure closure executes
             self.captureOverlayWindow?.onCaptureConfirmed = { [weak self] rect in
-                guard let self = self else { return }
+                print("[AppState] onCaptureConfirmed called with rect: \(rect)")
+                guard let self = self else {
+                    print("[AppState] ERROR: self is nil in onCaptureConfirmed")
+                    return
+                }
 
                 // Overlay is already closed by CaptureOverlayWindow
                 // Just reset state and capture
@@ -114,7 +120,11 @@ class AppState: ObservableObject {
             }
 
             self.captureOverlayWindow?.onCaptureCancelled = { [weak self] in
-                guard let self = self else { return }
+                print("[AppState] onCaptureCancelled called")
+                guard let self = self else {
+                    print("[AppState] ERROR: self is nil in onCaptureCancelled")
+                    return
+                }
 
                 self.captureOverlayWindow = nil
                 self.isCapturing = false
