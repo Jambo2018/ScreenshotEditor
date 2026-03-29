@@ -27,6 +27,7 @@ class AppState: ObservableObject {
     @Published var backgroundType: BackgroundType = .gradient
     @Published var selectedGradient: GradientPreset = .ocean
     @Published var selectedColor: Color = .white
+    @Published var backgroundImage: NSImage?
     @Published var blurAmount: Double = 0
     @Published var padding: Double = 40
     @Published var cornerRadius: Double = 12
@@ -240,7 +241,7 @@ class AppState: ObservableObject {
                     backgroundType: currentBackgroundType,
                     gradient: currentGradient,
                     solidColor: currentSolidColor,
-                    backgroundImage: nil, // TODO: Add backgroundImage support
+                    backgroundImage: self.backgroundImage,
                     blurAmount: currentBlurAmount,
                     padding: currentPadding,
                     cornerRadius: currentCornerRadius,

@@ -105,8 +105,14 @@ struct CanvasView: View {
                 .blur(radius: appState.blurAmount)
 
         case .image:
-            // TODO: Custom image background
-            Color.secondary.opacity(0.2)
+            if let backgroundImage = appState.backgroundImage {
+                Image(nsImage: backgroundImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .blur(radius: appState.blurAmount)
+            } else {
+                Color.secondary.opacity(0.2)
+            }
         }
     }
 }

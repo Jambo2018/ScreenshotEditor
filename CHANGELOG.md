@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4.0] - 2026-03-29
+
+### Added
+- Custom image background support - users can select any image as background with blur control
+
 ## [0.1.3.0] - 2026-03-29
 
 ### Added

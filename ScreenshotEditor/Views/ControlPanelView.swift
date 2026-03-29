@@ -107,6 +107,65 @@ struct BackgroundSection: View {
                     }
                 }
             }
+
+            // Image picker (for custom image mode)
+            if appState.backgroundType == .image {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Custom Background")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Button(action: selectBackgroundImage) {
+                        HStack {
+                            Image(systemName: "photo")
+                            Text(appState.backgroundImage != nil ? "Change Image..." : "Choose Image...")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+
+                    if let backgroundImage = appState.backgroundImage {
+                        HStack {
+                            Image(nsImage: backgroundImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 60, height: 60)
+                                .cornerRadius(6)
+                                .clipped()
+
+                            Button(action: clearBackgroundImage) {
+                                Image(systemName: "trash")
+                                    .foregroundColor(.red)
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func selectBackgroundImage() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.png, .jpeg, .heic, .tiff]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.message = "Select a background image"
+
+        panel.begin { response in
+            guard response == .OK, let url = panel.url,
+                  let image = NSImage(contentsOf: url) else { return }
+            DispatchQueue.main.async {
+                withAnimation {
+                    appState.backgroundImage = image
+                }
+            }
+        }
+    }
+
+    private func clearBackgroundImage() {
+        withAnimation {
+            appState.backgroundImage = nil
         }
     }
 }
