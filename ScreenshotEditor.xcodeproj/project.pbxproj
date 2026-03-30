@@ -21,6 +21,8 @@
 		A1000010 /* ScreenCapturer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000010 /* ScreenCapturer.swift */; };
 		A1000011 /* GlobalHotKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000011 /* GlobalHotKey.swift */; };
 		A1000012 /* CaptureOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000012 /* CaptureOverlayView.swift */; };
+		A1000013 /* AnnotationPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000013 /* AnnotationPanelView.swift */; };
+		A1000014 /* AnnotationLayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000014 /* AnnotationLayerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +41,8 @@
 		A2000010 /* ScreenCapturer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCapturer.swift; sourceTree = "<group>"; };
 		A2000011 /* GlobalHotKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotKey.swift; sourceTree = "<group>"; };
 		A2000012 /* CaptureOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureOverlayView.swift; sourceTree = "<group>"; };
+		A2000013 /* AnnotationPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationPanelView.swift; sourceTree = "<group>"; };
+		A2000014 /* AnnotationLayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationLayerView.swift; sourceTree = "<group>"; };
 		A3000001 /* ScreenshotEditor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScreenshotEditor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -92,6 +96,8 @@
 				A2000006 /* ErrorView.swift */,
 				A2000007 /* SettingsView.swift */,
 				A2000012 /* CaptureOverlayView.swift */,
+				A2000013 /* AnnotationPanelView.swift */,
+				A2000014 /* AnnotationLayerView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -197,6 +203,8 @@
 				A1000010 /* ScreenCapturer.swift in Sources */,
 				A1000011 /* GlobalHotKey.swift in Sources */,
 				A1000012 /* CaptureOverlayView.swift in Sources */,
+				A1000013 /* AnnotationPanelView.swift in Sources */,
+				A1000014 /* AnnotationLayerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

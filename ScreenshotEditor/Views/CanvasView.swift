@@ -38,6 +38,10 @@ struct CanvasView: View {
                         deviceFrameOverlay(for: image, frame: appState.deviceFrame)
                             .allowsHitTesting(false)
                     }
+
+                    // Annotation layer
+                    AnnotationLayerView(sourceImage: image)
+                        .environmentObject(appState)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(NSColor.controlBackgroundColor))

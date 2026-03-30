@@ -239,6 +239,124 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(presets.count, 5)
     }
 
+    // MARK: - Annotation Tests
+
+    func testAnnotationTypeAllCases() {
+        let allCases = AnnotationType.allCases
+        XCTAssertEqual(allCases.count, 6)
+        XCTAssertTrue(allCases.contains(.text))
+        XCTAssertTrue(allCases.contains(.arrow))
+        XCTAssertTrue(allCases.contains(.rectangle))
+        XCTAssertTrue(allCases.contains(.ellipse))
+        XCTAssertTrue(allCases.contains(.highlight))
+        XCTAssertTrue(allCases.contains(.blur))
+    }
+
+    func testAnnotationToolAllCases() {
+        let allCases = AnnotationTool.allCases
+        XCTAssertEqual(allCases.count, 6)
+        XCTAssertTrue(allCases.contains(.select))
+        XCTAssertTrue(allCases.contains(.text))
+        XCTAssertTrue(allCases.contains(.arrow))
+        XCTAssertTrue(allCases.contains(.rectangle))
+        XCTAssertTrue(allCases.contains(.highlight))
+        XCTAssertTrue(allCases.contains(.blur))
+    }
+
+    func testAnnotationToolIcons() {
+        XCTAssertEqual(AnnotationTool.select.icon, "cursorarrow")
+        XCTAssertEqual(AnnotationTool.text.icon, "textformat")
+        XCTAssertEqual(AnnotationTool.arrow.icon, "arrow.right")
+        XCTAssertEqual(AnnotationTool.rectangle.icon, "rectangle")
+        XCTAssertEqual(AnnotationTool.highlight.icon, "marker")
+        XCTAssertEqual(AnnotationTool.blur.icon, "blur")
+    }
+
+    func testAnnotationToolTitles() {
+        XCTAssertEqual(AnnotationTool.select.title, "选择")
+        XCTAssertEqual(AnnotationTool.text.title, "文字")
+        XCTAssertEqual(AnnotationTool.arrow.title, "箭头")
+        XCTAssertEqual(AnnotationTool.rectangle.title, "矩形")
+        XCTAssertEqual(AnnotationTool.highlight.title, "高亮")
+        XCTAssertEqual(AnnotationTool.blur.title, "模糊")
+    }
+
+    func testAnnotationTypeIcons() {
+        XCTAssertEqual(AnnotationType.text.icon, "textformat")
+        XCTAssertEqual(AnnotationType.arrow.icon, "arrow.right")
+        XCTAssertEqual(AnnotationType.rectangle.icon, "rectangle")
+        XCTAssertEqual(AnnotationType.ellipse.icon, "circle")
+        XCTAssertEqual(AnnotationType.highlight.icon, "marker")
+        XCTAssertEqual(AnnotationType.blur.icon, "blur")
+    }
+
+    func testAnnotationDisplayName() {
+        var textAnnotation = Annotation(
+            id: UUID(),
+            type: .text,
+            text: "Hello",
+            position: .zero,
+            fontSize: 14,
+            color: CodableColor(color: .white),
+            width: 2,
+            startPoint: nil,
+            endPoint: nil,
+            size: nil
+        )
+        XCTAssertEqual(textAnnotation.displayName, "Hello")
+
+        textAnnotation.text = ""
+        XCTAssertEqual(textAnnotation.displayName, "文字")
+
+        let arrowAnnotation = Annotation(
+            id: UUID(),
+            type: .arrow,
+            text: "",
+            position: .zero,
+            fontSize: 0,
+            color: CodableColor(color: .red),
+            width: 2,
+            startPoint: .zero,
+            endPoint: CGPoint(x: 100, y: 100),
+            size: nil
+        )
+        XCTAssertEqual(arrowAnnotation.displayName, "箭头")
+
+        let rectangleAnnotation = Annotation(
+            id: UUID(),
+            type: .rectangle,
+            text: "",
+            position: .zero,
+            fontSize: 0,
+            color: CodableColor(color: .blue),
+            width: 2,
+            startPoint: .zero,
+            endPoint: CGPoint(x: 100, y: 100),
+            size: nil
+        )
+        XCTAssertEqual(rectangleAnnotation.displayName, "矩形")
+    }
+
+    func testCodableColorInit() {
+        let white = CodableColor(color: .white)
+        XCTAssertEqual(white.red, 1.0)
+        XCTAssertEqual(white.green, 1.0)
+        XCTAssertEqual(white.blue, 1.0)
+        XCTAssertEqual(white.alpha, 1.0)
+
+        let black = CodableColor(color: .black)
+        XCTAssertEqual(black.red, 0.0)
+        XCTAssertEqual(black.green, 0.0)
+        XCTAssertEqual(black.blue, 0.0)
+        XCTAssertEqual(black.alpha, 1.0)
+
+        let red = CodableColor(color: .red)
+        XCTAssertEqual(red.red, 1.0)
+        XCTAssertEqual(red.green, 0.0)
+        XCTAssertEqual(red.blue, 0.0)
+        XCTAssertEqual(red.alpha, 1.0)
+    }
+
     // MARK: - Helper Methods
 
     private func createTestScreenshot(name: String = "test.png") -> Screenshot {

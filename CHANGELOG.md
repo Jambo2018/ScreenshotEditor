@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.9.0] - 2026-03-30
+
+### Added
+- Annotation tools: text, arrow, rectangle, ellipse, highlight, blur
+- Annotation panel for tool selection and settings
+- Canvas annotation rendering with drag-to-edit support
+- Text annotations with customizable font size and color
+- Shape annotations (arrow, rectangle) with color and stroke width control
+- Brush annotations (highlight, blur) with size and opacity control
+
 ## [0.1.8.0] - 2026-03-30
 
 ### Fixed

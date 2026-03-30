@@ -22,9 +22,16 @@ struct ContentView: View {
                 // Center - Canvas area
                 CanvasView()
 
-                // Right panel - Controls
-                ControlPanelView()
-                    .frame(minWidth: 250, maxWidth: 320)
+                // Right panel - Controls + Annotation tools
+                VStack(spacing: 0) {
+                    ControlPanelView()
+                        .frame(minWidth: 250, maxWidth: 320)
+
+                    Divider()
+
+                    AnnotationPanelView()
+                        .frame(minWidth: 250, maxWidth: 320)
+                }
             }
         }
         .onChange(of: appState.errorMessage) { _, newValue in

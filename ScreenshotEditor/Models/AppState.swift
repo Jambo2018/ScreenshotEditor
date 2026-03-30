@@ -48,6 +48,12 @@ class AppState: ObservableObject {
     @Published var isAddingText = false
     @Published var currentTextColor: Color = .white
     @Published var currentTextSize: Double = 24
+    @Published var selectedAnnotationTool: AnnotationTool = .select
+    @Published var currentShapeColor: Color = .red
+    @Published var currentStrokeWidth: Double = 2
+    @Published var currentBrushSize: Double = 20
+    @Published var currentBrushOpacity: Double = 0.5
+    @Published var isAnnotationPanelVisible: Bool = true
 
     // MARK: - Computed Properties
 
@@ -521,67 +527,6 @@ class AppState: ObservableObject {
     }
 }
 
-// MARK: - Supporting Types
-
-enum BackgroundType: String, CaseIterable {
-    case gradient = "Gradient"
-    case solid = "Solid Color"
-    case blur = "Blur"
-    case image = "Image"
-}
-
-struct GradientPreset: Identifiable, Hashable {
-    let id = UUID()
-    let name: String
-    let colors: [Color]
-
-    // MARK: - Original Presets (5)
-    static let ocean = GradientPreset(name: "Ocean", colors: [.blue, .purple])
-    static let sunset = GradientPreset(name: "Sunset", colors: [.orange, .pink])
-    static let forest = GradientPreset(name: "Forest", colors: [.green, .teal])
-    static let fire = GradientPreset(name: "Fire", colors: [.red, .yellow])
-    static let midnight = GradientPreset(name: "Midnight", colors: [.indigo, .black])
-    
-    // MARK: - New Presets - Warm Tones (5)
-    static let peach = GradientPreset(name: "Peach", colors: [.orange, .yellow, .pink])
-    static let coral = GradientPreset(name: "Coral", colors: [.red, .orange, .pink])
-    static let amber = GradientPreset(name: "Amber", colors: [.yellow, .orange, .red])
-    static let rose = GradientPreset(name: "Rose", colors: [.pink, .red, .purple])
-    static let honey = GradientPreset(name: "Honey", colors: [.yellow, .orange, .orange])
-    
-    // MARK: - New Presets - Cool Tones (5)
-    static let arctic = GradientPreset(name: "Arctic", colors: [.cyan, .blue, .purple])
-    static let mint = GradientPreset(name: "Mint", colors: [.green, .mint, .teal])
-    static let lavender = GradientPreset(name: "Lavender", colors: [.purple, .indigo, .pink])
-    static let sky = GradientPreset(name: "Sky", colors: [.blue, .cyan, .white])
-    static let oceanic = GradientPreset(name: "Oceanic", colors: [.teal, .blue, .indigo])
-    
-    // MARK: - New Presets - Special (5)
-    static let aurora = GradientPreset(name: "Aurora", colors: [.green, .cyan, .purple, .pink])
-    static let galaxy = GradientPreset(name: "Galaxy", colors: [.purple, .indigo, .black, .blue])
-    static let candy = GradientPreset(name: "Candy", colors: [.pink, .purple, .blue, .green])
-    static let sunrise = GradientPreset(name: "Sunrise", colors: [.purple, .pink, .orange, .yellow])
-    static let monochrome = GradientPreset(name: "Monochrome", colors: [.black, .gray, .white])
-
-    // MARK: - All Presets (20 total)
-    static let presets = [
-        // Original
-        ocean, sunset, forest, fire, midnight,
-        // Warm
-        peach, coral, amber, rose, honey,
-        // Cool
-        arctic, mint, lavender, sky, oceanic,
-        // Special
-        aurora, galaxy, candy, sunrise, monochrome
-    ]
-}
-
-enum DeviceFrame: String, CaseIterable {
-    case none = "None"
-    case iphone = "iPhone"
-    case macbook = "MacBook"
-}
-
 // MARK: - ImageFormat Extension
 
 extension ImageFormat {
@@ -608,6 +553,55 @@ extension ImageFormat {
     }
 }
 
+// MARK: - Supporting Types
+
+enum BackgroundType: String, CaseIterable {
+    case gradient = "Gradient"
+    case solid = "Solid Color"
+    case blur = "Blur"
+    case image = "Image"
+}
+
+struct GradientPreset: Identifiable, Hashable {
+    let id = UUID()
+    let name: String
+    let colors: [Color]
+
+    static let ocean = GradientPreset(name: "Ocean", colors: [.blue, .purple])
+    static let sunset = GradientPreset(name: "Sunset", colors: [.orange, .pink])
+    static let forest = GradientPreset(name: "Forest", colors: [.green, .teal])
+    static let fire = GradientPreset(name: "Fire", colors: [.red, .yellow])
+    static let midnight = GradientPreset(name: "Midnight", colors: [.indigo, .black])
+    static let peach = GradientPreset(name: "Peach", colors: [.orange, .yellow, .pink])
+    static let coral = GradientPreset(name: "Coral", colors: [.red, .orange, .pink])
+    static let amber = GradientPreset(name: "Amber", colors: [.yellow, .orange, .red])
+    static let rose = GradientPreset(name: "Rose", colors: [.pink, .red, .purple])
+    static let honey = GradientPreset(name: "Honey", colors: [.yellow, .orange, .orange])
+    static let arctic = GradientPreset(name: "Arctic", colors: [.cyan, .blue, .purple])
+    static let mint = GradientPreset(name: "Mint", colors: [.green, .mint, .teal])
+    static let lavender = GradientPreset(name: "Lavender", colors: [.purple, .indigo, .pink])
+    static let sky = GradientPreset(name: "Sky", colors: [.blue, .cyan, .white])
+    static let oceanic = GradientPreset(name: "Oceanic", colors: [.teal, .blue, .indigo])
+    static let aurora = GradientPreset(name: "Aurora", colors: [.green, .cyan, .purple, .pink])
+    static let galaxy = GradientPreset(name: "Galaxy", colors: [.purple, .indigo, .black, .blue])
+    static let candy = GradientPreset(name: "Candy", colors: [.pink, .purple, .blue, .green])
+    static let sunrise = GradientPreset(name: "Sunrise", colors: [.purple, .pink, .orange, .yellow])
+    static let monochrome = GradientPreset(name: "Monochrome", colors: [.black, .gray, .white])
+
+    static let presets = [
+        ocean, sunset, forest, fire, midnight,
+        peach, coral, amber, rose, honey,
+        arctic, mint, lavender, sky, oceanic,
+        aurora, galaxy, candy, sunrise, monochrome
+    ]
+}
+
+enum DeviceFrame: String, CaseIterable {
+    case none = "None"
+    case iphone = "iPhone"
+    case macbook = "MacBook"
+}
+
 // MARK: - Annotation Models
 
 struct Annotation: Identifiable, Codable {
@@ -617,7 +611,10 @@ struct Annotation: Identifiable, Codable {
     var position: CGPoint
     var fontSize: Double
     var color: CodableColor
-    var width: Double // For shapes
+    var width: Double
+    var startPoint: CGPoint?
+    var endPoint: CGPoint?
+    var size: CGSize?
 }
 
 enum AnnotationType: String, Codable {
@@ -626,23 +623,91 @@ enum AnnotationType: String, Codable {
     case rectangle
     case ellipse
     case highlight
+    case blur
 }
 
-// Helper for Codable Color
+enum AnnotationTool: String, CaseIterable {
+    case select = "select"
+    case text = "text"
+    case arrow = "arrow"
+    case rectangle = "rectangle"
+    case highlight = "highlight"
+    case blur = "blur"
+
+    var icon: String {
+        switch self {
+        case .select: return "cursorarrow"
+        case .text: return "textformat"
+        case .arrow: return "arrow.right"
+        case .rectangle: return "rectangle"
+        case .highlight: return "marker"
+        case .blur: return "blur"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .select: return "选择"
+        case .text: return "文字"
+        case .arrow: return "箭头"
+        case .rectangle: return "矩形"
+        case .highlight: return "高亮"
+        case .blur: return "模糊"
+        }
+    }
+}
+
+extension AnnotationType {
+    var icon: String {
+        switch self {
+        case .text: return "textformat"
+        case .arrow: return "arrow.right"
+        case .rectangle: return "rectangle"
+        case .ellipse: return "circle"
+        case .highlight: return "marker"
+        case .blur: return "blur"
+        }
+    }
+}
+
+extension Annotation {
+    var displayName: String {
+        switch type {
+        case .text:
+            return text.isEmpty ? "文字" : text
+        case .arrow: return "箭头"
+        case .rectangle: return "矩形"
+        case .ellipse: return "椭圆"
+        case .highlight: return "高亮"
+        case .blur: return "模糊"
+        }
+    }
+}
+
 struct CodableColor: Codable {
     var red: CGFloat
     var green: CGFloat
     var blue: CGFloat
     var alpha: CGFloat
-    
+
     init(color: Color) {
-        // Simplified - in production would extract actual RGB values
-        self.red = 1.0
-        self.green = 1.0
-        self.blue = 1.0
-        self.alpha = 1.0
+        if color == .white {
+            self.red = 1.0; self.green = 1.0; self.blue = 1.0; self.alpha = 1.0
+        } else if color == .black {
+            self.red = 0.0; self.green = 0.0; self.blue = 0.0; self.alpha = 1.0
+        } else if color == .red {
+            self.red = 1.0; self.green = 0.0; self.blue = 0.0; self.alpha = 1.0
+        } else if color == .green {
+            self.red = 0.0; self.green = 1.0; self.blue = 0.0; self.alpha = 1.0
+        } else if color == .blue {
+            self.red = 0.0; self.green = 0.0; self.blue = 1.0; self.alpha = 1.0
+        } else if color == .yellow {
+            self.red = 1.0; self.green = 1.0; self.blue = 0.0; self.alpha = 1.0
+        } else {
+            self.red = 1.0; self.green = 1.0; self.blue = 1.0; self.alpha = 1.0
+        }
     }
-    
+
     var color: Color {
         Color(red: red, green: green, blue: blue, opacity: alpha)
     }
