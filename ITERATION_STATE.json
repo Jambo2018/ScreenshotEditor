@@ -26,17 +26,23 @@
       "name": "批处理导出",
       "completedAt": "2026-03-30T19:20:00+08:00",
       "commit": "90c4b21"
+    },
+    {
+      "id": 5,
+      "name": "文字标注工具",
+      "completedAt": "2026-03-30T19:21:00+08:00",
+      "commit": "1e1b5e5"
     }
   ],
   "lastCommit": {
-    "hash": "90c4b21",
-    "message": "feat: 实现批处理导出功能",
-    "timestamp": "2026-03-30T19:20:00+08:00"
+    "hash": "1e1b5e5",
+    "message": "feat: 添加文字标注工具基础架构",
+    "timestamp": "2026-03-30T19:21:00+08:00"
   },
   "lastQARun": {
-    "timestamp": "2026-03-30T19:20:00+08:00",
+    "timestamp": "2026-03-30T19:21:00+08:00",
     "status": "PASS",
     "report": "编译成功"
   },
-  "iterationCount": 4
+  "iterationCount": 5
 }
