@@ -310,12 +310,91 @@ class AppState: ObservableObject {
     // MARK: - Persistence
 
     private func loadFromiCloud() {
-        // TODO: Implement iCloud sync
-        // For now, load from local documents directory
+        // Load from local documents directory (iCloud sync placeholder)
+        loadFromDocumentsDirectory()
+    }
+    
+    private func loadFromDocumentsDirectory() {
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return
+        }
+        
+        let appFolder = documentsPath.appendingPathComponent("ScreenshotEditor", isDirectory: true)
+        let metadataFile = appFolder.appendingPathComponent("metadata.json")
+        
+        // Create folder if not exists
+        try? FileManager.default.createDirectory(at: appFolder, withIntermediateDirectories: true)
+        
+        // Load metadata if exists
+        guard FileManager.default.fileExists(atPath: metadataFile.path),
+              let data = try? Data(contentsOf: metadataFile),
+              let metadata = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return
+        }
+        
+        // Note: Actual screenshot images need to be loaded separately
+        // This is a basic implementation - full iCloud sync would use NSUbiquitousKeyValueStore
+        print("[Persistence] Loaded metadata from documents directory")
+    }
+
+    private func saveToiCloud() {
+        // Save to local documents directory (iCloud sync placeholder)
+        saveToDocumentsDirectory()
+    }
+    
+    private func saveToDocumentsDirectory() {
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return
+        }
+        
+        let appFolder = documentsPath.appendingPathComponent("ScreenshotEditor", isDirectory: true)
+        let metadataFile = appFolder.appendingPathComponent("metadata.json")
+        
+        // Create folder if not exists
+        try? FileManager.default.createDirectory(at: appFolder, withIntermediateDirectories: true)
+        
+        // Create metadata dictionary
+        let metadata: [String: Any] = [
+            "version": 1,
+            "lastModified": ISO8601DateFormatter().string(from: Date()),
+            "screenshotCount": screenshots.count,
+            "settings": [
+                "backgroundType": backgroundType.rawValue,
+                "selectedGradient": selectedGradient.name,
+                "blurAmount": blurAmount,
+                "padding": padding,
+                "cornerRadius": cornerRadius,
+                "showShadow": showShadow,
+                "showBorder": showBorder,
+                "deviceFrame": deviceFrame.rawValue,
+                "autoCopyToClipboard": autoCopyToClipboard
+            ]
+        ]
+        
+        // Write metadata
+        if let data = try? JSONSerialization.data(withJSONObject: metadata, options: .prettyPrinted) {
+            try? data.write(to: metadataFile)
+            print("[Persistence] Saved metadata to documents directory")
+        }
+        
+        // Save screenshots as images
+        for screenshot in screenshots {
+            guard let image = screenshot.image,
+                  let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+                continue
+            }
+            
+            let bitmapRep = NSBitmapImageRep(cgImage: cgImage)
+            if let pngData = bitmapRep.representation(using: .png, properties: [:]) {
+                let imageFile = appFolder.appendingPathComponent("\(screenshot.id.uuidString).png")
+                try? pngData.write(to: imageFile)
+            }
+        }
     }
 
     private func saveTtoiCloud() {
-        // TODO: Implement iCloud sync
+        // Deprecated: Use saveToiCloud instead
+        saveToiCloud()
     }
 }
 
