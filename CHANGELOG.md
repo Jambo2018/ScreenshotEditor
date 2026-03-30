@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.6.0] - 2026-03-30
+
+### Fixed
+- Capture overlay deadlock on timeout - moved close() to async dispatch to avoid blocking main thread
+
 ## [0.1.5.0] - 2026-03-30
 
 ### Fixed
