@@ -156,16 +156,16 @@ class AppState: ObservableObject {
             // Timeout safety: force close after 10 seconds
             DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
                 guard let self = self else { return }
-                
+
                 #if DEBUG
                 print("[Capture] Timeout triggered")
                 #endif
-                
-                if let overlay = self.captureOverlayWindow {
-                    overlay.onCaptureCancelled?()
+
+                // Only reset state if overlay still exists (user hasn't confirmed/cancelled)
+                if self.captureOverlayWindow != nil {
+                    self.captureOverlayWindow = nil
+                    self.isCapturing = false
                 }
-                self.captureOverlayWindow = nil
-                self.isCapturing = false
             }
         }
     }
