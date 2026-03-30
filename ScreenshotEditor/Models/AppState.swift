@@ -86,12 +86,10 @@ class AppState: ObservableObject {
     }
 
     func startScreenCapture() {
-        guard let screen = NSScreen.main else { return }
-
-        // Prevent multiple overlays
-        if captureOverlayWindow != nil {
+        // Prevent multiple captures
+        if isCapturing {
             #if DEBUG
-            print("[Capture] Overlay already exists, ignoring")
+            print("[Capture] Already capturing, ignoring")
             #endif
             return
         }
@@ -118,22 +116,20 @@ class AppState: ObservableObject {
             }
 
             self.isCapturing = true
-            let overlayWindow = CaptureOverlayWindow(screen: screen)
-            self.captureOverlayWindow = overlayWindow
 
-            #if DEBUG
-            print("[Capture] Overlay window created")
-            #endif
+            // Setup shared overlay window
+            let overlay = CaptureOverlayWindow.shared
+            self.captureOverlayWindow = overlay
 
             // Capture overlay callbacks
-            overlayWindow.onCaptureConfirmed = { [weak self] rect in
+            overlay.onCaptureConfirmed = { [weak self] rect in
                 #if DEBUG
                 print("[Capture] Capture confirmed, rect: \(rect)")
                 #endif
-                
+
                 guard let self = self else { return }
 
-                // Reset state first
+                // Reset state
                 self.captureOverlayWindow = nil
                 self.isCapturing = false
 
@@ -141,17 +137,20 @@ class AppState: ObservableObject {
                 self.captureRegion(rect)
             }
 
-            overlayWindow.onCaptureCancelled = { [weak self] in
+            overlay.onCaptureCancelled = { [weak self] in
                 #if DEBUG
                 print("[Capture] Capture cancelled")
                 #endif
-                
+
                 guard let self = self else { return }
 
                 // Reset state
                 self.captureOverlayWindow = nil
                 self.isCapturing = false
             }
+
+            // Show the overlay
+            overlay.show()
 
             // Timeout safety: force close after 10 seconds
             DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
@@ -161,8 +160,8 @@ class AppState: ObservableObject {
                 print("[Capture] Timeout triggered")
                 #endif
 
-                // Close the overlay window
-                self.captureOverlayWindow?.cancelCapture()
+                // Hide the overlay window
+                self.captureOverlayWindow?.hide()
                 self.captureOverlayWindow = nil
                 self.isCapturing = false
             }

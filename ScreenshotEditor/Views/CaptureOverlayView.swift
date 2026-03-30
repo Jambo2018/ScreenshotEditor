@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-class CaptureOverlayWindow: NSWindow {
+class CaptureOverlayWindow: NSPanel {
 
     var onCaptureConfirmed: ((CGRect) -> Void)?
     var onCaptureCancelled: (() -> Void)?
@@ -16,14 +16,26 @@ class CaptureOverlayWindow: NSWindow {
     private var keyMonitor: Any?
     private var isClosing = false
 
-    init(screen: NSScreen) {
+    static let shared = CaptureOverlayWindow()
+
+    private init() {
         overlayView = CaptureOverlayView()
+
+        guard let screen = NSScreen.main else {
+            super.init(
+                contentRect: .zero,
+                styleMask: [.borderless, .nonactivatingPanel],
+                backing: .buffered,
+                defer: true
+            )
+            return
+        }
 
         super.init(
             contentRect: screen.frame,
-            styleMask: [.borderless],
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
-            defer: false
+            defer: true
         )
 
         self.level = .screenSaver
@@ -37,7 +49,7 @@ class CaptureOverlayWindow: NSWindow {
         }
 
         overlayView?.onCancel = { [weak self] in
-            self?.cancelCapture()
+            self?.handleCaptureCancelled()
         }
 
         guard let view = overlayView else { return }
@@ -45,70 +57,72 @@ class CaptureOverlayWindow: NSWindow {
 
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 { // ESC
-                self?.cancelCapture()
+                self?.handleCaptureCancelled()
                 return nil
             }
             return event
         }
-
-        self.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     deinit {
         #if DEBUG
         print("[Overlay] deinitialized")
         #endif
+        if let monitor = keyMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+    }
+
+    func show() {
+        guard let screen = NSScreen.main else { return }
+
+        // Reset state
+        isClosing = false
+
+        // Recreate overlay view
+        overlayView = CaptureOverlayView()
+        overlayView?.onConfirm = { [weak self] rect in
+            self?.handleCaptureConfirmed(rect)
+        }
+        overlayView?.onCancel = { [weak self] in
+            self?.handleCaptureCancelled()
+        }
+
+        self.contentView = NSHostingView(rootView: overlayView!)
+        self.setFrame(screen.frame, display: true)
+        self.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func hide() {
+        self.orderOut(nil)
+        self.contentView = nil
+        overlayView = nil
     }
 
     private func handleCaptureConfirmed(_ rect: CGRect) {
         guard !isClosing else { return }
         isClosing = true
 
-        cleanupResources()
+        let callback = onCaptureConfirmed
+        hide()
 
-        // Close window first
-        self.contentView = nil
-        overlayView = nil
-        self.orderOut(nil)
-
-        // Notify parent on next run loop to ensure window close is processed
-        DispatchQueue.main.async { [weak self] in
-            self?.onCaptureConfirmed?(rect)
-            // Close window after notifying to avoid deadlock
-            self?.close()
+        // Notify parent after hiding
+        DispatchQueue.main.async {
+            callback?(rect)
         }
     }
 
-    /// Cancel the capture and close the overlay window
-    func cancelCapture() {
+    private func handleCaptureCancelled() {
         guard !isClosing else { return }
         isClosing = true
 
-        cleanupResources()
+        let callback = onCaptureCancelled
+        hide()
 
-        // Close window first
-        self.contentView = nil
-        overlayView = nil
-        self.orderOut(nil)
-
-        // Notify parent on next run loop
-        DispatchQueue.main.async { [weak self] in
-            self?.onCaptureCancelled?()
-            // Close window after notifying to avoid deadlock
-            self?.close()
-        }
-    }
-
-    private func cleanupResources() {
-        onCaptureConfirmed = nil
-        onCaptureCancelled = nil
-        overlayView?.onConfirm = nil
-        overlayView?.onCancel = nil
-
-        if let monitor = keyMonitor {
-            NSEvent.removeMonitor(monitor)
-            keyMonitor = nil
+        // Notify parent after hiding
+        DispatchQueue.main.async {
+            callback?()
         }
     }
 }
