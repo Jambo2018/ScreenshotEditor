@@ -333,13 +333,45 @@ struct GradientPreset: Identifiable, Hashable {
     let name: String
     let colors: [Color]
 
+    // MARK: - Original Presets (5)
     static let ocean = GradientPreset(name: "Ocean", colors: [.blue, .purple])
     static let sunset = GradientPreset(name: "Sunset", colors: [.orange, .pink])
     static let forest = GradientPreset(name: "Forest", colors: [.green, .teal])
     static let fire = GradientPreset(name: "Fire", colors: [.red, .yellow])
     static let midnight = GradientPreset(name: "Midnight", colors: [.indigo, .black])
+    
+    // MARK: - New Presets - Warm Tones (5)
+    static let peach = GradientPreset(name: "Peach", colors: [.orange, .yellow, .pink])
+    static let coral = GradientPreset(name: "Coral", colors: [.red, .orange, .pink])
+    static let amber = GradientPreset(name: "Amber", colors: [.yellow, .orange, .red])
+    static let rose = GradientPreset(name: "Rose", colors: [.pink, .red, .purple])
+    static let honey = GradientPreset(name: "Honey", colors: [.yellow, .orange, .orange])
+    
+    // MARK: - New Presets - Cool Tones (5)
+    static let arctic = GradientPreset(name: "Arctic", colors: [.cyan, .blue, .purple])
+    static let mint = GradientPreset(name: "Mint", colors: [.green, .mint, .teal])
+    static let lavender = GradientPreset(name: "Lavender", colors: [.purple, .indigo, .pink])
+    static let sky = GradientPreset(name: "Sky", colors: [.blue, .cyan, .white])
+    static let oceanic = GradientPreset(name: "Oceanic", colors: [.teal, .blue, .indigo])
+    
+    // MARK: - New Presets - Special (5)
+    static let aurora = GradientPreset(name: "Aurora", colors: [.green, .cyan, .purple, .pink])
+    static let galaxy = GradientPreset(name: "Galaxy", colors: [.purple, .indigo, .black, .blue])
+    static let candy = GradientPreset(name: "Candy", colors: [.pink, .purple, .blue, .green])
+    static let sunrise = GradientPreset(name: "Sunrise", colors: [.purple, .pink, .orange, .yellow])
+    static let monochrome = GradientPreset(name: "Monochrome", colors: [.black, .gray, .white])
 
-    static let presets = [ocean, sunset, forest, fire, midnight]
+    // MARK: - All Presets (20 total)
+    static let presets = [
+        // Original
+        ocean, sunset, forest, fire, midnight,
+        // Warm
+        peach, coral, amber, rose, honey,
+        // Cool
+        arctic, mint, lavender, sky, oceanic,
+        // Special
+        aurora, galaxy, candy, sunrise, monochrome
+    ]
 }
 
 enum DeviceFrame: String, CaseIterable {
