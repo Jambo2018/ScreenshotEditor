@@ -103,9 +103,6 @@ class PinWindow: NSPanel {
             overlayView: overlayView
         ))
 
-        // Enable mouse events for drag - set acceptsMouseMove through options
-        hostingView.setAccessibilityElement(true)
-
         // Add pan gesture for drag
         let panRecognizer = NSPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
         panRecognizer.buttonMask = 0x1 // Left mouse button only
@@ -244,16 +241,7 @@ class PinWindow: NSPanel {
     // MARK: - Overlay
 
     private func toggleOverlay() {
-        // Toggle overlay visibility through SwiftUI state
-        // The overlay controls visibility is managed by PinOverlayView's internal state
-        guard let overlay = overlayView else { return }
-
-        // Access the SwiftUI state through the hosting view's rootView
-        // This is a workaround - in a cleaner design, we'd use a binding
-        // For now, we just trigger the toggle callback which PinOverlayView handles
-        #if DEBUG
-        print("[PinWindow] Toggle overlay triggered")
-        #endif
+        NotificationCenter.default.post(name: NSNotification.Name("TogglePinOverlay"), object: nil)
     }
 
     // MARK: - Window Closure
@@ -342,8 +330,7 @@ struct PinWindowContainerView: NSViewRepresentable {
 // MARK: - Pin Overlay View
 
 struct PinOverlayView: View {
-    @State private var showControls = false
-    @State private var controlsVisible = true
+    @State private var controlsVisible: Bool = true
 
     var onToggleControls: () -> Void
 
@@ -400,7 +387,7 @@ struct PinOverlayView: View {
 
                         // Rotate controls
                         VStack(spacing: 4) {
-                            Text("⌥ + Scroll")
+                            Text("⇧ + ⌥ + Scroll")
                                 .font(.caption2)
                                 .foregroundColor(.white.opacity(0.7))
                             Text("Rotate")
@@ -416,5 +403,8 @@ struct PinOverlayView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: controlsVisible)
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("TogglePinOverlay"))) { _ in
+            controlsVisible.toggle()
+        }
     }
 }
