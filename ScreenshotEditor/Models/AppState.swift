@@ -161,11 +161,10 @@ class AppState: ObservableObject {
                 print("[Capture] Timeout triggered")
                 #endif
 
-                // Only reset state if overlay still exists (user hasn't confirmed/cancelled)
-                if self.captureOverlayWindow != nil {
-                    self.captureOverlayWindow = nil
-                    self.isCapturing = false
-                }
+                // Close the overlay window properly
+                self.captureOverlayWindow?.cancelCapture()
+                self.captureOverlayWindow = nil
+                self.isCapturing = false
             }
         }
     }

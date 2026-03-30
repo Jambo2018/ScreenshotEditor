@@ -37,7 +37,7 @@ class CaptureOverlayWindow: NSWindow {
         }
 
         overlayView?.onCancel = { [weak self] in
-            self?.handleCaptureCancelled()
+            self?.cancelCapture()
         }
 
         guard let view = overlayView else { return }
@@ -45,7 +45,7 @@ class CaptureOverlayWindow: NSWindow {
 
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 { // ESC
-                self?.handleCaptureCancelled()
+                self?.cancelCapture()
                 return nil
             }
             return event
@@ -79,7 +79,8 @@ class CaptureOverlayWindow: NSWindow {
         }
     }
 
-    private func handleCaptureCancelled() {
+    /// Cancel the capture and close the overlay window
+    func cancelCapture() {
         guard !isClosing else { return }
         isClosing = true
 
