@@ -71,11 +71,12 @@ class CaptureOverlayWindow: NSWindow {
         self.contentView = nil
         overlayView = nil
         self.orderOut(nil)
-        self.close()
 
         // Notify parent on next run loop to ensure window close is processed
         DispatchQueue.main.async { [weak self] in
             self?.onCaptureConfirmed?(rect)
+            // Close window after notifying to avoid deadlock
+            self?.close()
         }
     }
 
@@ -90,11 +91,12 @@ class CaptureOverlayWindow: NSWindow {
         self.contentView = nil
         overlayView = nil
         self.orderOut(nil)
-        self.close()
 
         // Notify parent on next run loop
         DispatchQueue.main.async { [weak self] in
             self?.onCaptureCancelled?()
+            // Close window after notifying to avoid deadlock
+            self?.close()
         }
     }
 
