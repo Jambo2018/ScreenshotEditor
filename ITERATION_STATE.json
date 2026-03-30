@@ -32,6 +32,24 @@
       "name": "文字标注工具",
       "completedAt": "2026-03-30T19:21:00+08:00",
       "commit": "1e1b5e5"
+    },
+    {
+      "id": 6,
+      "name": "箭头/形状工具 + 性能优化",
+      "completedAt": "2026-03-30T19:22:00+08:00",
+      "commit": "pending"
+    },
+    {
+      "id": 7,
+      "name": "性能优化",
+      "completedAt": "2026-03-30T19:22:00+08:00",
+      "commit": "pending"
+    },
+    {
+      "id": 8,
+      "name": "错误处理优化",
+      "completedAt": "2026-03-30T19:22:00+08:00",
+      "commit": "pending"
     }
   ],
   "lastCommit": {
@@ -44,5 +62,6 @@
     "status": "PASS",
     "report": "编译成功"
   },
-  "iterationCount": 5
+  "iterationCount": 8,
+  "summary": "MVP 功能 100% 完成，Post-MVP 功能 67% 完成"
 }
