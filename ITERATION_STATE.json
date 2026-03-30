@@ -20,17 +20,23 @@
       "name": "实现 iCloud 同步基础",
       "completedAt": "2026-03-30T19:19:00+08:00",
       "commit": "09b52c4"
+    },
+    {
+      "id": 4,
+      "name": "批处理导出",
+      "completedAt": "2026-03-30T19:20:00+08:00",
+      "commit": "90c4b21"
     }
   ],
   "lastCommit": {
-    "hash": "09b52c4",
-    "message": "feat: 实现 iCloud 同步基础（本地文档目录持久化）",
-    "timestamp": "2026-03-30T19:19:00+08:00"
+    "hash": "90c4b21",
+    "message": "feat: 实现批处理导出功能",
+    "timestamp": "2026-03-30T19:20:00+08:00"
   },
   "lastQARun": {
-    "timestamp": "2026-03-30T19:19:00+08:00",
+    "timestamp": "2026-03-30T19:20:00+08:00",
     "status": "PASS",
     "report": "编译成功"
   },
-  "iterationCount": 3
+  "iterationCount": 4
 }
