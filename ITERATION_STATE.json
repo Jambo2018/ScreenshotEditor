@@ -14,17 +14,23 @@
       "name": "添加更多渐变预设",
       "completedAt": "2026-03-30T19:18:00+08:00",
       "commit": "1e2b4aa"
+    },
+    {
+      "id": 3,
+      "name": "实现 iCloud 同步基础",
+      "completedAt": "2026-03-30T19:19:00+08:00",
+      "commit": "09b52c4"
     }
   ],
   "lastCommit": {
-    "hash": "1e2b4aa",
-    "message": "feat: 添加 15 种新渐变预设（共 20 种）",
-    "timestamp": "2026-03-30T19:18:00+08:00"
+    "hash": "09b52c4",
+    "message": "feat: 实现 iCloud 同步基础（本地文档目录持久化）",
+    "timestamp": "2026-03-30T19:19:00+08:00"
   },
   "lastQARun": {
-    "timestamp": "2026-03-30T19:17:44+08:00",
+    "timestamp": "2026-03-30T19:19:00+08:00",
     "status": "PASS",
     "report": "编译成功"
   },
-  "iterationCount": 2
+  "iterationCount": 3
 }

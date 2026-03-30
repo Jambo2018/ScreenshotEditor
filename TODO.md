@@ -18,10 +18,10 @@
   - ~~目标：10-20 种预设~~ 已完成 20 种
   - ~~当前只有 5 种~~ 新增 15 种（Warm/Cool/Special 三类）
 
-- [ ] **3. 实现 iCloud 同步基础**
-  - 保存/加载截图历史
-  - 同步设置
-  - 当前状态：loadFromiCloud() 和 saveToiCloud() 都是 TODO
+- [x] **3. 实现 iCloud 同步基础** ✅ _已完成 2026-03-30_
+  - ~~保存/加载截图历史~~ 已实现本地文档目录持久化
+  - ~~同步设置~~ 元数据和设置已保存
+  - ~~当前状态：loadFromiCloud() 和 saveToiCloud() 都是 TODO~~ 已实现
 
 ### P1 - Post-MVP 功能
 
