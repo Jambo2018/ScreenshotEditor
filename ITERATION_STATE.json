@@ -8,17 +8,23 @@
       "name": "完善设置界面",
       "completedAt": "2026-03-30T19:16:00+08:00",
       "commit": "04c127a"
+    },
+    {
+      "id": 2,
+      "name": "添加更多渐变预设",
+      "completedAt": "2026-03-30T19:18:00+08:00",
+      "commit": "1e2b4aa"
     }
   ],
   "lastCommit": {
-    "hash": "04c127a",
-    "message": "feat: 完善设置界面 - 添加外观主题、快捷键自定义、捕获设置",
-    "timestamp": "2026-03-30T19:16:00+08:00"
+    "hash": "1e2b4aa",
+    "message": "feat: 添加 15 种新渐变预设（共 20 种）",
+    "timestamp": "2026-03-30T19:18:00+08:00"
   },
   "lastQARun": {
-    "timestamp": "2026-03-30T19:15:37+08:00",
+    "timestamp": "2026-03-30T19:17:44+08:00",
     "status": "PASS",
-    "report": "编译成功，测试方案需配置"
+    "report": "编译成功"
   },
-  "iterationCount": 1
+  "iterationCount": 2
 }
