@@ -11,6 +11,7 @@ struct ContentView: View {
     @EnvironmentObject var appState: AppState
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var showErrorSheet: Bool = false
+    @State private var showHistoryWindow: Bool = false
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -51,9 +52,21 @@ struct ContentView: View {
                 }
                 .help("Export image (⌘E)")
             }
+
+            ToolbarItem(placement: .automatic) {
+                Button(action: { showHistoryWindow = true }) {
+                    Label("History", systemImage: "clock")
+                }
+                .help("View screenshot history")
+            }
         }
         .sheet(isPresented: $showErrorSheet) {
             ErrorView(message: $appState.errorMessage)
+        }
+        .sheet(isPresented: $showHistoryWindow) {
+            HistoryView()
+                .environmentObject(appState)
+                .frame(width: 800, height: 600)
         }
     }
 }

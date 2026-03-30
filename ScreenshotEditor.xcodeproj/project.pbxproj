@@ -25,6 +25,7 @@
 		A1000014 /* AnnotationLayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000014 /* AnnotationLayerView.swift */; };
 		A1000015 /* PinWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015 /* PinWindow.swift */; };
 		A1000016 /* PinWindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000016 /* PinWindowManager.swift */; };
+		A1000017 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000017 /* HistoryView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +48,7 @@
 		A2000014 /* AnnotationLayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationLayerView.swift; sourceTree = "<group>"; };
 		A2000015 /* PinWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinWindow.swift; sourceTree = "<group>"; };
 		A2000016 /* PinWindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinWindowManager.swift; sourceTree = "<group>"; };
+		A2000017 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		A3000001 /* ScreenshotEditor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScreenshotEditor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -104,6 +106,7 @@
 				A2000014 /* AnnotationLayerView.swift */,
 				A2000015 /* PinWindow.swift */,
 				A2000016 /* PinWindowManager.swift */,
+				A2000017 /* HistoryView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -213,6 +216,7 @@
 				A1000014 /* AnnotationLayerView.swift in Sources */,
 				A1000015 /* PinWindow.swift in Sources */,
 				A1000016 /* PinWindowManager.swift in Sources */,
+				A1000017 /* HistoryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
