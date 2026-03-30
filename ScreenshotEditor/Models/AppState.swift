@@ -41,6 +41,13 @@ class AppState: ObservableObject {
 
     // Export settings
     @Published var autoCopyToClipboard: Bool = true
+    
+    // Annotation tools
+    @Published var annotations: [Annotation] = []
+    @Published var selectedAnnotationId: UUID?
+    @Published var isAddingText = false
+    @Published var currentTextColor: Color = .white
+    @Published var currentTextSize: Double = 24
 
     // MARK: - Computed Properties
 
@@ -575,5 +582,45 @@ extension ImageFormat {
         case .webp:
             return ".png" // Fallback
         }
+    }
+}
+
+// MARK: - Annotation Models
+
+struct Annotation: Identifiable, Codable {
+    let id: UUID
+    var type: AnnotationType
+    var text: String
+    var position: CGPoint
+    var fontSize: Double
+    var color: CodableColor
+    var width: Double // For shapes
+}
+
+enum AnnotationType: String, Codable {
+    case text
+    case arrow
+    case rectangle
+    case ellipse
+    case highlight
+}
+
+// Helper for Codable Color
+struct CodableColor: Codable {
+    var red: CGFloat
+    var green: CGFloat
+    var blue: CGFloat
+    var alpha: CGFloat
+    
+    init(color: Color) {
+        // Simplified - in production would extract actual RGB values
+        self.red = 1.0
+        self.green = 1.0
+        self.blue = 1.0
+        self.alpha = 1.0
+    }
+    
+    var color: Color {
+        Color(red: red, green: green, blue: blue, opacity: alpha)
     }
 }
