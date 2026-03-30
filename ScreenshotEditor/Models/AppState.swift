@@ -83,11 +83,29 @@ class AppState: ObservableObject {
         }
 
         hotKeyMonitor = GlobalHotKeyMonitor()
+
+        // Cmd+Shift+K: Start screen capture
         hotKeyMonitor?.register(
             key: .k,
             modifiers: [.command, .shift]
         ) { [weak self] in
             self?.startScreenCapture()
+        }
+
+        // F3: Pin current screenshot (Snipaste-style)
+        hotKeyMonitor?.register(
+            key: .f3,
+            modifiers: []
+        ) { [weak self] in
+            self?.pinCurrentScreenshot()
+        }
+
+        // Shift+F3: Close all pin windows
+        hotKeyMonitor?.register(
+            key: .f3,
+            modifiers: [.shift]
+        ) { [weak self] in
+            self?.closeAllPinWindows()
         }
     }
 
@@ -524,6 +542,31 @@ class AppState: ObservableObject {
     private func saveTtoiCloud() {
         // Deprecated: Use saveToiCloud instead
         saveToiCloud()
+    }
+
+    // MARK: - Pin Window Management
+
+    func pinCurrentScreenshot() {
+        guard let screenshot = selectedScreenshot,
+              let image = screenshot.image else {
+            #if DEBUG
+            print("[Pin] No screenshot selected")
+            #endif
+            return
+        }
+
+        #if DEBUG
+        print("[Pin] Creating pin window for screenshot: \(screenshot.id)")
+        #endif
+
+        PinWindowManager.shared.createPin(image: image, position: nil, group: nil)
+    }
+
+    func closeAllPinWindows() {
+        #if DEBUG
+        print("[Pin] Closing all pin windows")
+        #endif
+        PinWindowManager.shared.closeAllPins()
     }
 }
 

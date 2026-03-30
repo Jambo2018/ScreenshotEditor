@@ -123,6 +123,9 @@ struct KeyEquivalent {
     static let c = KeyEquivalent(character: "c", keyCode: 8)
     static let escape = KeyEquivalent(character: "\u{001B}", keyCode: 53)
     static let `return` = KeyEquivalent(character: "\n", keyCode: 36)
+
+    // Pin window shortcuts
+    static let f3 = KeyEquivalent(character: "\u{F3}", keyCode: 118) // F3
 }
 
 // MARK: - Modifier Flags Extension
