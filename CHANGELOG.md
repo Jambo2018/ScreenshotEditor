@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.5.0] - 2026-03-30
+
+### Fixed
+- Capture overlay timeout handler crash - removed direct callback invocation to prevent double-execution
+
 ## [0.1.4.0] - 2026-03-29
 
 ### Added
