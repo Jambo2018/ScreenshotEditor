@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 
 struct CanvasView: View {
     @EnvironmentObject var appState: AppState
@@ -32,6 +34,10 @@ struct CanvasView: View {
                                 .stroke(appState.showBorder ? Color.white.opacity(0.5) : Color.clear, lineWidth: 1)
                         )
                         .padding(appState.padding)
+                        .onDrag {
+                            // Support dragging the edited screenshot
+                            itemProviderForImage(image)
+                        }
 
                     // Device frame overlay
                     if appState.deviceFrame != .none {
@@ -45,6 +51,11 @@ struct CanvasView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(NSColor.controlBackgroundColor))
+                .onDrop(of: [.image, .fileURL], isTargeted: nil) { providers in
+                    // Support dropping screenshots onto the canvas
+                    handleDrop(providers: providers)
+                    return true
+                }
 
                 // Quick action toolbar
                 HStack(spacing: 12) {
@@ -117,6 +128,52 @@ struct CanvasView: View {
             } else {
                 Color.secondary.opacity(0.2)
             }
+        }
+    }
+
+    private func itemProviderForImage(_ image: NSImage) -> NSItemProvider {
+        // Convert NSImage to PNG data for drag export
+        if let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+            let bitmapRep = NSBitmapImageRep(cgImage: cgImage)
+            if let pngData = bitmapRep.representation(using: NSBitmapImageRep.FileType.png, properties: [:]) {
+                let itemProvider = NSItemProvider(item: pngData as NSSecureCoding, typeIdentifier: UTType.png.identifier)
+                return itemProvider
+            }
+        }
+        return NSItemProvider()
+    }
+
+    private func handleDrop(providers: [NSItemProvider]) {
+        for provider in providers {
+            // Try to load image from drop
+            provider.loadItem(forTypeIdentifier: UTType.image.identifier, options: nil) { item, error in
+                if let error = error {
+                    DispatchQueue.main.async {
+                        appState.errorMessage = "Failed to load image: \(error.localizedDescription)"
+                    }
+                    return
+                }
+
+                if let imageData = item as? Data,
+                   let nsImage = NSImage(data: imageData) {
+                    DispatchQueue.main.async {
+                        // Create new screenshot from dropped image
+                        let screenshot = Screenshot(
+                            id: UUID(),
+                            name: "Dropped Image \(Date().timeIntervalSince1970)",
+                            sourceURL: nil,
+                            createdAt: Date(),
+                            image: nsImage
+                        )
+                        appState.screenshots.append(screenshot)
+                        appState.selectedScreenshotId = screenshot.id
+                    }
+                } else if let url = item as? URL {
+                    // Handle file URL drops
+                    appState.loadImage(from: url)
+                }
+            }
+            break // Only handle first provider
         }
     }
 }
