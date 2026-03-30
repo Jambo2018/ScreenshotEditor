@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.8.0] - 2026-03-30
+
+### Fixed
+- Export output now matches CanvasView preview — corrected effect order (corner radius, shadow, border applied to source image before compositing)
+
 ## [0.1.7.0] - 2026-03-30
 
 ### Fixed

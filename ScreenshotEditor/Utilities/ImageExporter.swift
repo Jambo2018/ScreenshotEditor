@@ -18,6 +18,11 @@ class ImageExporter {
     }
 
     /// Export image with all effects applied
+    ///
+    /// Effect order matches CanvasView preview:
+    /// 1. Background (with optional blur)
+    /// 2. Source image with padding, corner radius, shadow, border
+    /// 3. Device frame overlay (if enabled)
     static func exportImage(
         sourceImage: NSImage,
         backgroundType: BackgroundType,
@@ -44,8 +49,6 @@ class ImageExporter {
 
         print("[Export] Got CGImage: \(cgImage.width)x\(cgImage.height)")
 
-        let ciImage = CIImage(cgImage: cgImage)
-
         // Calculate output size with padding
         let sourceSize = sourceImage.size
         let outputWidth = sourceSize.width + (padding * 2)
@@ -55,8 +58,8 @@ class ImageExporter {
         print("[Export] Output size: \(outputSize)")
         print("[Export] Background type: \(backgroundType)")
 
-        // Create background
-        let backgroundImage = createBackground(
+        // Step 1: Create background
+        let backgroundCI = createBackground(
             type: backgroundType,
             gradient: gradient,
             solidColor: solidColor,
@@ -65,20 +68,29 @@ class ImageExporter {
             blurAmount: blurAmount
         )
 
-        // Create composition with positioning
-        let positionedImage = ciImage.transformed(by: CGAffineTransform(translationX: padding, y: padding))
+        // Step 2: Apply corner radius to source image FIRST (matches CanvasView)
+        let sourceCGImage = cgImage
+        let roundedSource = cornerRadius > 0 ? applyCornerRadius(sourceCGImage, radius: cornerRadius, size: sourceSize) : sourceCGImage
 
+        // Step 3: Apply shadow to rounded source (matches CanvasView order)
+        let sourceWithShadow = showShadow ? applyShadowToSource(roundedSource, cornerRadius: cornerRadius, padding: padding) : roundedSource
+
+        // Step 4: Create positioned source image with padding
+        let positionedImage = CIImage(cgImage: sourceWithShadow)
+            .transformed(by: CGAffineTransform(translationX: padding, y: padding))
+
+        // Step 5: Composite source over background
         guard let composition = CIFilter(name: "CISourceOverCompositing") else {
             throw ExportError.exportFailed
         }
         composition.setValue(positionedImage, forKey: kCIInputImageKey)
-        composition.setValue(backgroundImage, forKey: kCIInputBackgroundImageKey)
+        composition.setValue(backgroundCI, forKey: kCIInputBackgroundImageKey)
 
         guard let composedImage = composition.outputImage else {
             throw ExportError.exportFailed
         }
 
-        // Create context and render
+        // Step 6: Render composition
         let context = CIContext(options: [:])
         let finalBounds = CGRect(origin: .zero, size: outputSize)
 
@@ -91,21 +103,15 @@ class ImageExporter {
 
         print("[Export] Created CGImage: \(renderedCGImage.width)x\(renderedCGImage.height)")
 
-        // Apply corner radius
-        let roundedImage = applyCornerRadius(renderedCGImage, radius: cornerRadius, size: outputSize)
+        // Step 7: Apply border on top (matches CanvasView overlay stroke)
+        let borderedImage = showBorder ? applyBorderOnTop(renderedCGImage, radius: cornerRadius, size: outputSize, padding: padding) : renderedCGImage
 
-        // Apply border if needed
-        let borderedImage = showBorder ? applyBorder(roundedImage, radius: cornerRadius, size: outputSize) : roundedImage
-
-        // Apply shadow if needed
-        let shadowedImage = showShadow ? applyShadow(borderedImage, cornerRadius: cornerRadius, size: outputSize) : borderedImage
-
-        // Apply device frame if needed
+        // Step 8: Apply device frame if needed
         let finalImage: CGImage
         if deviceFrame != .none {
-            finalImage = applyDeviceFrame(shadowedImage, frame: deviceFrame, size: outputSize)
+            finalImage = applyDeviceFrame(borderedImage, frame: deviceFrame, size: outputSize)
         } else {
-            finalImage = shadowedImage
+            finalImage = borderedImage
         }
 
         print("[Export] Final image processing complete")
@@ -232,6 +238,7 @@ class ImageExporter {
 
     // MARK: - Corner Radius
 
+    /// Apply corner radius to source image only (before compositing)
     private static func applyCornerRadius(_ image: CGImage, radius: Double, size: CGSize) -> CGImage {
         guard radius > 0 else { return image }
 
@@ -259,47 +266,16 @@ class ImageExporter {
         return context.makeImage()!
     }
 
-    // MARK: - Border
-
-    private static func applyBorder(_ image: CGImage, radius: Double, size: CGSize) -> CGImage {
-        let borderWidth: CGFloat = 2
-
-        let context = CGContext(
-            data: nil,
-            width: image.width,
-            height: image.height,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )!
-
-        // Draw the image
-        context.draw(image, in: CGRect(origin: .zero, size: size))
-
-        // Draw border path
-        let borderPath = CGPath(
-            roundedRect: CGRect(origin: .zero, size: size),
-            cornerWidth: radius,
-            cornerHeight: radius,
-            transform: nil
-        )
-
-        context.addPath(borderPath)
-        context.setStrokeColor(NSColor.white.withAlphaComponent(0.5).cgColor)
-        context.setLineWidth(borderWidth)
-        context.strokePath()
-
-        return context.makeImage()!
-    }
-
-    // MARK: - Shadow
-
-    private static func applyShadow(_ image: CGImage, cornerRadius: Double, size: CGSize) -> CGImage {
+    /// Apply shadow to source image with padding offset (matches CanvasView .shadow modifier)
+    private static func applyShadowToSource(_ image: CGImage, cornerRadius: Double, padding: Double) -> CGImage {
+        // CanvasView uses: .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
         let shadowOffset: CGFloat = 10
         let shadowBlur: CGFloat = 20
-        let shadowSize = CGSize(width: size.width + shadowOffset * 2 + shadowBlur * 2,
-                               height: size.height + shadowOffset * 2 + shadowBlur * 2)
+        let extraWidth = shadowOffset * 2 + shadowBlur * 2
+        let extraHeight = shadowOffset * 2 + shadowBlur * 2
+        let shadowWidth = CGFloat(image.width) + extraWidth
+        let shadowHeight = CGFloat(image.height) + extraHeight
+        let shadowSize = CGSize(width: shadowWidth, height: shadowHeight)
 
         let context = CGContext(
             data: nil,
@@ -311,24 +287,60 @@ class ImageExporter {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         )!
 
-        // Draw shadow
-        let shadowRect = CGRect(x: shadowOffset + shadowBlur, y: shadowOffset + shadowBlur,
-                               width: size.width, height: size.height)
+        // Draw shadow first (offset down by 10px)
+        let imageX = shadowOffset + shadowBlur
+        let imageY = shadowOffset + shadowBlur
+        let imageRect = CGRect(x: imageX, y: imageY, width: CGFloat(image.width), height: CGFloat(image.height))
         let shadowPath = CGPath(
-            roundedRect: shadowRect,
+            roundedRect: imageRect,
             cornerWidth: cornerRadius,
             cornerHeight: cornerRadius,
             transform: nil
         )
 
-        context.setShadow(offset: CGSize(width: 0, height: -shadowOffset), blur: shadowBlur,
+        context.setShadow(offset: CGSize(width: 0, height: shadowOffset), blur: shadowBlur,
                          color: NSColor.black.withAlphaComponent(0.3).cgColor)
         context.addPath(shadowPath)
-        context.setFillColor(NSColor.clear.cgColor)
-        context.fillPath(using: .evenOdd)
+        context.setFillColor(NSColor.white.cgColor)
+        context.fillPath()
 
-        // Draw image
-        context.draw(image, in: shadowRect)
+        // Draw image on top (clear shadow)
+        context.setShadow(offset: .zero, blur: 0)
+        context.draw(image, in: imageRect)
+
+        return context.makeImage()!
+    }
+
+    /// Apply border stroke on top of composed image (matches CanvasView .overlay stroke)
+    private static func applyBorderOnTop(_ image: CGImage, radius: Double, size: CGSize, padding: Double) -> CGImage {
+        let borderWidth: CGFloat = 1
+
+        let context = CGContext(
+            data: nil,
+            width: image.width,
+            height: image.height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )!
+
+        // Draw the image first
+        context.draw(image, in: CGRect(origin: .zero, size: CGSize(width: image.width, height: image.height)))
+
+        // Draw border path around the source image area (with padding offset)
+        let sourceRect = CGRect(x: padding, y: padding, width: size.width - padding * 2, height: size.height - padding * 2)
+        let borderPath = CGPath(
+            roundedRect: sourceRect,
+            cornerWidth: radius,
+            cornerHeight: radius,
+            transform: nil
+        )
+
+        context.addPath(borderPath)
+        context.setStrokeColor(NSColor.white.withAlphaComponent(0.5).cgColor)
+        context.setLineWidth(borderWidth)
+        context.strokePath()
 
         return context.makeImage()!
     }
