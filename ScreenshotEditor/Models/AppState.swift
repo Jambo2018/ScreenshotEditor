@@ -90,14 +90,27 @@ class AppState: ObservableObject {
 
         // Prevent multiple overlays
         if captureOverlayWindow != nil {
+            #if DEBUG
+            print("[Capture] Overlay already exists, ignoring")
+            #endif
             return
         }
+
+        #if DEBUG
+        print("[Capture] Starting screen capture...")
+        #endif
 
         // Request permission if needed
         Task { @MainActor in
             if !ScreenCapturer.hasScreenRecordingPermission() {
+                #if DEBUG
+                print("[Capture] Requesting permission...")
+                #endif
                 let granted = await ScreenCapturer.requestPermission()
                 if !granted {
+                    #if DEBUG
+                    print("[Capture] Permission denied")
+                    #endif
                     self.errorMessage = "Screen recording permission denied"
                     self.isCapturing = false
                     return
@@ -108,37 +121,49 @@ class AppState: ObservableObject {
             let overlayWindow = CaptureOverlayWindow(screen: screen)
             self.captureOverlayWindow = overlayWindow
 
+            #if DEBUG
+            print("[Capture] Overlay window created")
+            #endif
+
             // Capture overlay callbacks
             overlayWindow.onCaptureConfirmed = { [weak self] rect in
+                #if DEBUG
+                print("[Capture] Capture confirmed, rect: \(rect)")
+                #endif
+                
                 guard let self = self else { return }
 
-                // Reset state
+                // Reset state first
                 self.captureOverlayWindow = nil
                 self.isCapturing = false
-
-                // Activate main app window
-                NSApp.activate(ignoringOtherApps: true)
 
                 // Capture on background thread
                 self.captureRegion(rect)
             }
 
             overlayWindow.onCaptureCancelled = { [weak self] in
+                #if DEBUG
+                print("[Capture] Capture cancelled")
+                #endif
+                
                 guard let self = self else { return }
 
                 // Reset state
                 self.captureOverlayWindow = nil
                 self.isCapturing = false
-
-                // Activate main app window
-                NSApp.activate(ignoringOtherApps: true)
             }
 
             // Timeout safety: force close after 10 seconds
             DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
-                guard let self = self,
-                      let overlay = self.captureOverlayWindow else { return }
-                overlay.onCaptureCancelled?()
+                guard let self = self else { return }
+                
+                #if DEBUG
+                print("[Capture] Timeout triggered")
+                #endif
+                
+                if let overlay = self.captureOverlayWindow {
+                    overlay.onCaptureCancelled?()
+                }
                 self.captureOverlayWindow = nil
                 self.isCapturing = false
             }
