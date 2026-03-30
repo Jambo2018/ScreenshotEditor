@@ -93,7 +93,7 @@ struct AnnotationLayerView: View {
         switch appState.selectedAnnotationTool {
         case AnnotationTool.arrow, AnnotationTool.rectangle:
             updateShapeDrawing(at: location, canvasSize: canvasSize)
-        case AnnotationTool.highlight, AnnotationTool.blur:
+        case AnnotationTool.highlight, AnnotationTool.blur, AnnotationTool.mosaic:
             updateBrushDrawing(at: location, canvasSize: canvasSize)
         default:
             break
@@ -104,7 +104,7 @@ struct AnnotationLayerView: View {
         switch appState.selectedAnnotationTool {
         case AnnotationTool.arrow, AnnotationTool.rectangle:
             completeShapeDrawing(at: location, canvasSize: canvasSize)
-        case AnnotationTool.highlight, AnnotationTool.blur:
+        case AnnotationTool.highlight, AnnotationTool.blur, AnnotationTool.mosaic:
             completeBrushDrawing(at: location, canvasSize: canvasSize)
         default:
             break
@@ -181,7 +181,18 @@ struct AnnotationLayerView: View {
         let normalizedX = location.x / canvasSize.width
         let normalizedY = location.y / canvasSize.height
 
-        let type: AnnotationType = (appState.selectedAnnotationTool == AnnotationTool.highlight) ? AnnotationType.highlight : AnnotationType.blur
+        let type: AnnotationType
+        let color: Color
+        if appState.selectedAnnotationTool == AnnotationTool.highlight {
+            type = AnnotationType.highlight
+            color = Color.yellow
+        } else if appState.selectedAnnotationTool == AnnotationTool.blur {
+            type = AnnotationType.blur
+            color = Color.black
+        } else {
+            type = AnnotationType.mosaic
+            color = Color.clear
+        }
 
         let annotation = Annotation(
             id: UUID(),
@@ -189,7 +200,7 @@ struct AnnotationLayerView: View {
             text: "",
             position: CGPoint(x: normalizedX, y: normalizedY),
             fontSize: appState.currentBrushSize,
-            color: CodableColor(color: appState.selectedAnnotationTool == AnnotationTool.highlight ? Color.yellow : Color.black),
+            color: CodableColor(color: color),
             width: appState.currentBrushOpacity,
             startPoint: CGPoint(x: normalizedX, y: normalizedY),
             endPoint: nil as CGPoint?,
@@ -241,6 +252,8 @@ struct AnnotationRenderer: View {
             HighlightAnnotationView(annotation: annotation, canvasSize: canvasSize)
         case AnnotationType.blur:
             BlurAnnotationView(annotation: annotation, canvasSize: canvasSize)
+        case AnnotationType.mosaic:
+            MosaicAnnotationView(annotation: annotation, canvasSize: canvasSize)
         }
     }
 }
@@ -393,6 +406,30 @@ struct BlurAnnotationView: View {
             }
             .stroke(Color.black.opacity(0.3), lineWidth: annotation.fontSize)
             .blur(radius: 5)
+        } else {
+            EmptyView()
+        }
+    }
+}
+
+// MARK: - Mosaic Annotation View
+
+struct MosaicAnnotationView: View {
+    let annotation: Annotation
+    let canvasSize: CGSize
+
+    var body: some View {
+        if let start = annotation.startPoint, let end = annotation.endPoint {
+            let startPoint = CGPoint(x: start.x * canvasSize.width, y: start.y * canvasSize.height)
+            let endPoint = CGPoint(x: end.x * canvasSize.width, y: end.y * canvasSize.height)
+
+            // Draw mosaic effect as a thick pixelated line
+            Path { path in
+                path.move(to: startPoint)
+                path.addLine(to: endPoint)
+            }
+            .stroke(Color.black.opacity(0.5), lineWidth: annotation.fontSize)
+            .blur(radius: 2)
         } else {
             EmptyView()
         }

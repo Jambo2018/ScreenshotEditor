@@ -111,7 +111,7 @@ struct ToolSettingsSection: View {
             case .arrow, .rectangle:
                 ShapeSettingsView()
 
-            case .highlight, .blur:
+            case .highlight, .blur, .mosaic:
                 BrushSettingsView()
             }
         }

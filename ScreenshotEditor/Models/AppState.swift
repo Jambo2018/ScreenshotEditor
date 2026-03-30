@@ -667,6 +667,7 @@ enum AnnotationType: String, Codable {
     case ellipse
     case highlight
     case blur
+    case mosaic
 }
 
 enum AnnotationTool: String, CaseIterable {
@@ -676,6 +677,7 @@ enum AnnotationTool: String, CaseIterable {
     case rectangle = "rectangle"
     case highlight = "highlight"
     case blur = "blur"
+    case mosaic = "mosaic"
 
     var icon: String {
         switch self {
@@ -685,6 +687,7 @@ enum AnnotationTool: String, CaseIterable {
         case .rectangle: return "rectangle"
         case .highlight: return "marker"
         case .blur: return "blur"
+        case .mosaic: return "pixel"
         }
     }
 
@@ -696,6 +699,7 @@ enum AnnotationTool: String, CaseIterable {
         case .rectangle: return "矩形"
         case .highlight: return "高亮"
         case .blur: return "模糊"
+        case .mosaic: return "马赛克"
         }
     }
 }
@@ -709,6 +713,7 @@ extension AnnotationType {
         case .ellipse: return "circle"
         case .highlight: return "marker"
         case .blur: return "blur"
+        case .mosaic: return "pixel"
         }
     }
 }
@@ -723,6 +728,7 @@ extension Annotation {
         case .ellipse: return "椭圆"
         case .highlight: return "高亮"
         case .blur: return "模糊"
+        case .mosaic: return "马赛克"
         }
     }
 }
