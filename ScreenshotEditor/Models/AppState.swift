@@ -15,7 +15,9 @@ class AppState: ObservableObject {
 
     @Published var screenshots: [Screenshot] = []
     @Published var selectedScreenshotId: UUID?
+    @Published var selectedScreenshotIds: Set<UUID> = [] // For batch selection
     @Published var isExporting: Bool = false
+    @Published var isBatchExporting: Bool = false
     @Published var errorMessage: String?
     @Published var isCapturing: Bool = false
 
@@ -217,6 +219,43 @@ class AppState: ObservableObject {
 
         isExporting = true
 
+        exportImages(images: [(image, screenshot.name)], format: format, copyToClipboard: copyToClipboard)
+    }
+    
+    func exportBatch(format: ImageFormat = .png, copyToClipboard: Bool = false) {
+        guard !selectedScreenshotIds.isEmpty else {
+            errorMessage = "No screenshots selected for batch export"
+            return
+        }
+        
+        isBatchExporting = true
+        
+        var imagesToExport: [(NSImage, String)] = []
+        for id in selectedScreenshotIds {
+            if let screenshot = screenshots.first(where: { $0.id == id }),
+               let image = screenshot.image {
+                imagesToExport.append((image, screenshot.name))
+            }
+        }
+        
+        guard !imagesToExport.isEmpty else {
+            errorMessage = "No valid images to export"
+            isBatchExporting = false
+            return
+        }
+        
+        exportImages(images: imagesToExport, format: format, copyToClipboard: copyToClipboard)
+    }
+    
+    private func exportImages(images: [(NSImage, String)], format: ImageFormat, copyToClipboard: Bool?) {
+        let isBatch = images.count > 1
+        
+        if isBatch {
+            isBatchExporting = true
+        } else {
+            isExporting = true
+        }
+
         let currentBackgroundType = backgroundType
         let currentGradient = selectedGradient
         let currentSolidColor = selectedColor
@@ -235,32 +274,86 @@ class AppState: ObservableObject {
             }
 
             do {
-                // Export image with current settings
-                let data = try ImageExporter.exportImage(
-                    sourceImage: image,
-                    backgroundType: currentBackgroundType,
-                    gradient: currentGradient,
-                    solidColor: currentSolidColor,
-                    backgroundImage: self.backgroundImage,
-                    blurAmount: currentBlurAmount,
-                    padding: currentPadding,
-                    cornerRadius: currentCornerRadius,
-                    showShadow: currentShowShadow,
-                    showBorder: currentShowBorder,
-                    deviceFrame: currentDeviceFrame,
-                    format: format
-                )
+                if isBatch {
+                    // Batch export: save to folder
+                    let panel = NSOpenPanel()
+                    panel.canChooseFiles = false
+                    panel.canChooseDirectories = true
+                    panel.allowsMultipleSelection = false
+                    panel.message = "Choose folder for batch export"
+                    
+                    DispatchQueue.main.async {
+                        panel.begin { response in
+                            guard response == .OK, let folderURL = panel.url else {
+                                DispatchQueue.main.async {
+                                    self.isBatchExporting = false
+                                }
+                                return
+                            }
+                            
+                            var exportedCount = 0
+                            for (image, name) in images {
+                                do {
+                                    let data = try ImageExporter.exportImage(
+                                        sourceImage: image,
+                                        backgroundType: currentBackgroundType,
+                                        gradient: currentGradient,
+                                        solidColor: currentSolidColor,
+                                        backgroundImage: self.backgroundImage,
+                                        blurAmount: currentBlurAmount,
+                                        padding: currentPadding,
+                                        cornerRadius: currentCornerRadius,
+                                        showShadow: currentShowShadow,
+                                        showBorder: currentShowBorder,
+                                        deviceFrame: currentDeviceFrame,
+                                        format: format
+                                    )
+                                    
+                                    let filename = "\(name)_edited\(format.fileExtension)"
+                                    let fileURL = folderURL.appendingPathComponent(filename)
+                                    try data.write(to: fileURL)
+                                    exportedCount += 1
+                                } catch {
+                                    print("[BatchExport] Failed to export \(name): \(error)")
+                                }
+                            }
+                            
+                            DispatchQueue.main.async {
+                                self.isBatchExporting = false
+                                self.errorMessage = nil
+                                print("Batch export completed: \(exportedCount)/\(images.count) images")
+                            }
+                        }
+                    }
+                } else {
+                    // Single export: show save panel
+                    let data = try ImageExporter.exportImage(
+                        sourceImage: images.first!.0,
+                        backgroundType: currentBackgroundType,
+                        gradient: currentGradient,
+                        solidColor: currentSolidColor,
+                        backgroundImage: self.backgroundImage,
+                        blurAmount: currentBlurAmount,
+                        padding: currentPadding,
+                        cornerRadius: currentCornerRadius,
+                        showShadow: currentShowShadow,
+                        showBorder: currentShowBorder,
+                        deviceFrame: currentDeviceFrame,
+                        format: format
+                    )
 
-                print("[Export] Export succeeded, data size: \(data.count) bytes")
+                    print("[Export] Export succeeded, data size: \(data.count) bytes")
 
-                DispatchQueue.main.async {
-                    self.isExporting = false
-                    self.showSavePanel(data: data, format: format, copyToClipboard: shouldCopyToClipboard)
+                    DispatchQueue.main.async {
+                        self.isExporting = false
+                        self.showSavePanel(data: data, format: format, copyToClipboard: shouldCopyToClipboard)
+                    }
                 }
             } catch {
                 print("[Export] ERROR: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     self.isExporting = false
+                    self.isBatchExporting = false
                     self.errorMessage = "Export failed: \(error.localizedDescription)"
                 }
             }

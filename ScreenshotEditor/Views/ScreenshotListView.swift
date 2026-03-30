@@ -9,16 +9,30 @@ import SwiftUI
 
 struct ScreenshotListView: View {
     @EnvironmentObject var appState: AppState
+    @State private var isMultiSelectMode = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
-            Text("Recent Imports")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+            // Header with multi-select toggle
+            HStack {
+                Text("Recent Imports")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+                
+                Spacer()
+                
+                if !appState.screenshots.isEmpty {
+                    Button(action: { isMultiSelectMode.toggle() }) {
+                        Image(systemName: isMultiSelectMode ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(isMultiSelectMode ? .accentColor : .secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Toggle multi-select for batch export")
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
 
             // Screenshot list
             List(selection: $appState.selectedScreenshotId) {
@@ -32,6 +46,12 @@ struct ScreenshotListView: View {
                             Button("Show in Finder") {
                                 if let url = screenshot.sourceURL {
                                     NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
+                                }
+                            }
+                            if !isMultiSelectMode {
+                                Divider()
+                                Button("Select for Batch Export") {
+                                    isMultiSelectMode = true
                                 }
                             }
                         }
