@@ -49,6 +49,7 @@
 		A2000015 /* PinWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinWindow.swift; sourceTree = "<group>"; };
 		A2000016 /* PinWindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinWindowManager.swift; sourceTree = "<group>"; };
 		A2000017 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		A2000018 /* VisionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionService.swift; sourceTree = "<group>"; };
 		A3000001 /* ScreenshotEditor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScreenshotEditor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -126,6 +127,7 @@
 				A200000C /* ImageExporter.swift */,
 				A2000010 /* ScreenCapturer.swift */,
 				A2000011 /* GlobalHotKey.swift */,
+				A2000018 /* VisionService.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -217,6 +219,7 @@
 				A1000015 /* PinWindow.swift in Sources */,
 				A1000016 /* PinWindowManager.swift in Sources */,
 				A1000017 /* HistoryView.swift in Sources */,
+				A1000018 /* VisionService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
