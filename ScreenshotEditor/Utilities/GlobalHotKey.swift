@@ -121,6 +121,7 @@ struct KeyEquivalent {
     static let k = KeyEquivalent(character: "k", keyCode: 37)
     static let s = KeyEquivalent(character: "s", keyCode: 1)
     static let c = KeyEquivalent(character: "c", keyCode: 8)
+    static let i = KeyEquivalent(character: "i", keyCode: 34) // I for color picker
     static let escape = KeyEquivalent(character: "\u{001B}", keyCode: 53)
     static let `return` = KeyEquivalent(character: "\n", keyCode: 36)
 

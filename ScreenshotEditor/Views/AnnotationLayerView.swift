@@ -82,8 +82,10 @@ struct AnnotationLayerView: View {
             addTextAnnotation(at: location, canvasSize: canvasSize)
         case AnnotationTool.arrow, AnnotationTool.rectangle:
             startShapeDrawing(at: location, canvasSize: canvasSize)
-        case AnnotationTool.highlight, AnnotationTool.blur:
+        case AnnotationTool.highlight, AnnotationTool.blur, AnnotationTool.mosaic:
             startBrushDrawing(at: location, canvasSize: canvasSize)
+        case AnnotationTool.colorPicker:
+            pickColor(at: location, in: canvasSize)
         default:
             break
         }
@@ -106,6 +108,10 @@ struct AnnotationLayerView: View {
             completeShapeDrawing(at: location, canvasSize: canvasSize)
         case AnnotationTool.highlight, AnnotationTool.blur, AnnotationTool.mosaic:
             completeBrushDrawing(at: location, canvasSize: canvasSize)
+        case AnnotationTool.colorPicker:
+            // Color picker completes on tap
+            appState.selectedAnnotationTool = .select
+            appState.isColorPickingMode = false
         default:
             break
         }
@@ -228,6 +234,40 @@ struct AnnotationLayerView: View {
     private func completeBrushDrawing(at location: CGPoint, canvasSize: CGSize) {
         updateBrushDrawing(at: location, canvasSize: canvasSize)
         appState.selectedAnnotationTool = AnnotationTool.select
+    }
+
+    // MARK: - Color Picker
+
+    private func pickColor(at location: CGPoint, in canvasSize: CGSize) {
+        // Convert canvas location to image coordinates
+        let imageX = location.x * (sourceImage.size.width / canvasSize.width)
+        let imageY = location.y * (sourceImage.size.height / canvasSize.height)
+
+        guard let cgImage = sourceImage.cgImage(forProposedRect: nil, context: nil, hints: nil),
+              let dataProvider = cgImage.dataProvider,
+              let pixelData = dataProvider.data else {
+            return
+        }
+
+        let data = CFDataGetBytePtr(pixelData)!
+        let bytesPerRow = cgImage.bytesPerRow
+        let bytesPerPixel = cgImage.bitsPerPixel / 8
+
+        // Calculate pixel offset
+        let pixelOffset = Int(imageY) * bytesPerRow + Int(imageX) * bytesPerPixel
+
+        let red = CGFloat(data[pixelOffset]) / 255.0
+        let green = CGFloat(data[pixelOffset + 1]) / 255.0
+        let blue = CGFloat(data[pixelOffset + 2]) / 255.0
+
+        let pickedColor = Color(red: red, green: green, blue: blue)
+
+        // Set color for current tool
+        appState.setColorForCurrentTool(pickedColor)
+
+        // Reset to select tool after picking
+        appState.selectedAnnotationTool = .select
+        appState.isColorPickingMode = false
     }
 }
 

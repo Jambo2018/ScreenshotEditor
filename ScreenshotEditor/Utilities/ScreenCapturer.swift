@@ -67,4 +67,18 @@ class ScreenCapturer {
         }
         return windowInfo.map { $0 as NSDictionary }
     }
+
+    /// Capture a 1x1 pixel at a specific screen point for color picking
+    static func captureScreen(at point: CGPoint, size: CGSize = CGSize(width: 1, height: 1)) -> NSImage? {
+        let rect = CGRect(x: point.x, y: point.y, width: size.width, height: size.height)
+        guard let cgImage = CGWindowListCreateImage(
+            rect,
+            .optionOnScreenOnly,
+            kCGNullWindowID,
+            .bestResolution
+        ) else {
+            return nil
+        }
+        return NSImage(cgImage: cgImage, size: size)
+    }
 }

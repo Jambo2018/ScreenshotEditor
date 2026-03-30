@@ -54,6 +54,7 @@ class AppState: ObservableObject {
     @Published var currentBrushSize: Double = 20
     @Published var currentBrushOpacity: Double = 0.5
     @Published var isAnnotationPanelVisible: Bool = true
+    @Published var isColorPickingMode: Bool = false
 
     // MARK: - Computed Properties
 
@@ -106,6 +107,14 @@ class AppState: ObservableObject {
             modifiers: [.shift]
         ) { [weak self] in
             self?.closeAllPinWindows()
+        }
+
+        // I: Activate color picker
+        hotKeyMonitor?.register(
+            key: .i,
+            modifiers: []
+        ) { [weak self] in
+            self?.activateColorPicker()
         }
     }
 
@@ -568,6 +577,49 @@ class AppState: ObservableObject {
         #endif
         PinWindowManager.shared.closeAllPins()
     }
+
+    // MARK: - Color Picker
+
+    func activateColorPicker() {
+        isColorPickingMode = true
+        selectedAnnotationTool = .colorPicker
+        #if DEBUG
+        print("[ColorPicker] Activated")
+        #endif
+    }
+
+    func pickColor(at screenPoint: CGPoint) -> Color? {
+        guard let image = ScreenCapturer.captureScreen(at: screenPoint, size: CGSize(width: 1, height: 1)),
+              let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
+              let dataProvider = cgImage.dataProvider,
+              let pixelData = dataProvider.data else {
+            return nil
+        }
+
+        let data = CFDataGetBytePtr(pixelData)!
+        let red = CGFloat(data[0]) / 255.0
+        let green = CGFloat(data[1]) / 255.0
+        let blue = CGFloat(data[2]) / 255.0
+
+        return Color(red: red, green: green, blue: blue)
+    }
+
+    func setColorForCurrentTool(_ color: Color) {
+        switch selectedAnnotationTool {
+        case .text:
+            currentTextColor = color
+        case .rectangle, .arrow:
+            currentShapeColor = color
+        case .highlight, .blur, .mosaic:
+            // Brush tools use currentShapeColor for consistency
+            currentShapeColor = color
+        default:
+            break
+        }
+        #if DEBUG
+        print("[ColorPicker] Set color for current tool")
+        #endif
+    }
 }
 
 // MARK: - ImageFormat Extension
@@ -678,6 +730,7 @@ enum AnnotationTool: String, CaseIterable {
     case highlight = "highlight"
     case blur = "blur"
     case mosaic = "mosaic"
+    case colorPicker = "colorPicker"
 
     var icon: String {
         switch self {
@@ -688,6 +741,7 @@ enum AnnotationTool: String, CaseIterable {
         case .highlight: return "marker"
         case .blur: return "blur"
         case .mosaic: return "pixel"
+        case .colorPicker: return "eyedropper"
         }
     }
 
@@ -700,6 +754,7 @@ enum AnnotationTool: String, CaseIterable {
         case .highlight: return "高亮"
         case .blur: return "模糊"
         case .mosaic: return "马赛克"
+        case .colorPicker: return "取色器"
         }
     }
 }

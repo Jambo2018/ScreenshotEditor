@@ -113,6 +113,9 @@ struct ToolSettingsSection: View {
 
             case .highlight, .blur, .mosaic:
                 BrushSettingsView()
+
+            case .colorPicker:
+                ColorPickerInfoView()
             }
         }
     }
@@ -333,6 +336,28 @@ struct AnnotationRowView: View {
             RoundedRectangle(cornerRadius: 4)
                 .fill(appState.selectedAnnotationId == annotation.id ? Color.accentColor.opacity(0.2) : Color.clear)
         )
+    }
+}
+
+// MARK: - Color Picker Info View
+
+struct ColorPickerInfoView: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("取色器")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Text("点击图片任意位置吸取颜色")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Text("吸取的颜色会自动应用到当前选中的工具")
+                .font(.caption2)
+                .foregroundColor(.gray)
+                .padding(.top, 4)
+        }
+        .padding(.vertical, 8)
     }
 }
 
