@@ -111,8 +111,11 @@ struct ToolSettingsSection: View {
             case .arrow, .rectangle:
                 ShapeSettingsView()
 
-            case .highlight, .blur, .mosaic:
+            case .highlight, .blur, .mosaic, .freehand:
                 BrushSettingsView()
+
+            case .number:
+                NumberSettingsView()
 
             case .colorPicker:
                 ColorPickerInfoView()
@@ -358,6 +361,54 @@ struct ColorPickerInfoView: View {
                 .padding(.top, 4)
         }
         .padding(.vertical, 8)
+    }
+}
+
+// MARK: - Number Settings View
+
+struct NumberSettingsView: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        VStack(spacing: 10) {
+            // Color picker
+            VStack(alignment: .leading, spacing: 6) {
+                Text("编号颜色")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+
+                HStack(spacing: 6) {
+                    ForEach([Color.red, Color.green, Color.blue, Color.yellow, Color.white, Color.black], id: \.self) { color in
+                        Circle()
+                            .fill(color)
+                            .frame(width: 24, height: 24)
+                            .overlay(
+                                Circle()
+                                    .stroke(appState.currentShapeColor == color ? Color.accentColor : Color.clear, lineWidth: 2)
+                            )
+                            .onTapGesture {
+                                withAnimation {
+                                    appState.currentShapeColor = color
+                                }
+                            }
+                    }
+                }
+            }
+
+            // Font size slider
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("大小")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("\(Int(appState.currentTextSize))pt")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                Slider(value: $appState.currentTextSize, in: 12...72, step: 2)
+            }
+        }
     }
 }
 

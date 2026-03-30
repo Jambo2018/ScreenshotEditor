@@ -720,6 +720,8 @@ enum AnnotationType: String, Codable {
     case highlight
     case blur
     case mosaic
+    case number
+    case freehand
 }
 
 enum AnnotationTool: String, CaseIterable {
@@ -730,6 +732,8 @@ enum AnnotationTool: String, CaseIterable {
     case highlight = "highlight"
     case blur = "blur"
     case mosaic = "mosaic"
+    case number = "number"
+    case freehand = "freehand"
     case colorPicker = "colorPicker"
 
     var icon: String {
@@ -741,6 +745,8 @@ enum AnnotationTool: String, CaseIterable {
         case .highlight: return "marker"
         case .blur: return "blur"
         case .mosaic: return "pixel"
+        case .number: return "number"
+        case .freehand: return "pencil"
         case .colorPicker: return "eyedropper"
         }
     }
@@ -754,6 +760,8 @@ enum AnnotationTool: String, CaseIterable {
         case .highlight: return "高亮"
         case .blur: return "模糊"
         case .mosaic: return "马赛克"
+        case .number: return "编号"
+        case .freehand: return "自由绘"
         case .colorPicker: return "取色器"
         }
     }
@@ -769,6 +777,8 @@ extension AnnotationType {
         case .highlight: return "marker"
         case .blur: return "blur"
         case .mosaic: return "pixel"
+        case .number: return "number"
+        case .freehand: return "pencil"
         }
     }
 }
@@ -784,6 +794,8 @@ extension Annotation {
         case .highlight: return "高亮"
         case .blur: return "模糊"
         case .mosaic: return "马赛克"
+        case .number: return "编号"
+        case .freehand: return "自由绘"
         }
     }
 }

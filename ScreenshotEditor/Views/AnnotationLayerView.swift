@@ -294,6 +294,10 @@ struct AnnotationRenderer: View {
             BlurAnnotationView(annotation: annotation, canvasSize: canvasSize)
         case AnnotationType.mosaic:
             MosaicAnnotationView(annotation: annotation, canvasSize: canvasSize)
+        case AnnotationType.number:
+            NumberAnnotationView(annotation: annotation, canvasSize: canvasSize)
+        case AnnotationType.freehand:
+            FreehandAnnotationView(annotation: annotation, canvasSize: canvasSize)
         }
     }
 }
@@ -470,6 +474,47 @@ struct MosaicAnnotationView: View {
             }
             .stroke(Color.black.opacity(0.5), lineWidth: annotation.fontSize)
             .blur(radius: 2)
+        } else {
+            EmptyView()
+        }
+    }
+}
+
+// MARK: - Number Annotation View
+
+struct NumberAnnotationView: View {
+    let annotation: Annotation
+    let canvasSize: CGSize
+
+    var body: some View {
+        Text(annotation.text)
+            .font(.system(size: annotation.fontSize, weight: .bold))
+            .foregroundColor(annotation.color.color)
+            .padding(8)
+            .background(Circle().fill(annotation.color.color))
+            .position(
+                x: annotation.position.x * canvasSize.width,
+                y: annotation.position.y * canvasSize.height
+            )
+    }
+}
+
+// MARK: - Freehand Annotation View
+
+struct FreehandAnnotationView: View {
+    let annotation: Annotation
+    let canvasSize: CGSize
+
+    var body: some View {
+        if let start = annotation.startPoint, let end = annotation.endPoint {
+            let startPoint = CGPoint(x: start.x * canvasSize.width, y: start.y * canvasSize.height)
+            let endPoint = CGPoint(x: end.x * canvasSize.width, y: end.y * canvasSize.height)
+
+            Path { path in
+                path.move(to: startPoint)
+                path.addLine(to: endPoint)
+            }
+            .stroke(annotation.color.color, style: StrokeStyle(lineWidth: annotation.width, lineCap: .round, lineJoin: .round))
         } else {
             EmptyView()
         }
