@@ -210,25 +210,188 @@ class PinWindowManager {
 
     /// Save current workspace (pins and groups)
     func saveWorkspace(name: String = "Default") {
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            #if DEBUG
+            print("[Workspace] ERROR: Could not access documents directory")
+            #endif
+            return
+        }
+
+        let appFolder = documentsPath.appendingPathComponent("ScreenshotEditor", isDirectory: true)
+        let workspacesFolder = appFolder.appendingPathComponent("workspaces", isDirectory: true)
+
+        // Create folders if they don't exist
+        try? FileManager.default.createDirectory(at: appFolder, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: workspacesFolder, withIntermediateDirectories: true)
+
+        // Build workspace data with pin details
+        var pinsData: [[String: Any]] = []
+        for (pinId, pinWindow) in activePins {
+            var pinData: [String: Any] = [
+                "id": pinId.uuidString,
+                "frame": [
+                    "x": pinWindow.frame.origin.x,
+                    "y": pinWindow.frame.origin.y,
+                    "width": pinWindow.frame.size.width,
+                    "height": pinWindow.frame.size.height
+                ],
+                "opacity": pinWindow.opacityValue,
+                "scaleFactor": pinWindow.scaleFactor,
+                "rotationAngle": pinWindow.rotationAngle
+            ]
+
+            // Save pin image
+            if let imageView = pinWindow.contentView?.subviews.compactMap({ $0 as? NSImageView }).first,
+               let image = imageView.image,
+               let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil as [NSImageRep.HintKey: Any]?) {
+                let imageFile = workspacesFolder.appendingPathComponent("\(name)_\(pinId.uuidString).png")
+                let bitmapRep = NSBitmapImageRep(cgImage: cgImage)
+                if let pngData = bitmapRep.representation(using: NSBitmapImageRep.FileType.png, properties: [:]) {
+                    try? pngData.write(to: imageFile)
+                    pinData["imageFile"] = "\(name)_\(pinId.uuidString).png"
+                }
+            }
+
+            pinsData.append(pinData)
+        }
+
         let workspaceData: [String: Any] = [
             "name": name,
-            "pins": activePins.keys.map { $0.uuidString },
+            "savedAt": ISO8601DateFormatter().string(from: Date()),
+            "pins": pinsData,
             "groups": pinGroups.mapValues { $0.map { $0.uuidString } }
         ]
 
-        // TODO: Implement actual persistence to ~/Documents/ScreenshotEditor/workspaces/
-        #if DEBUG
-        print("[PinWindowManager] Saving workspace: \(workspaceData)")
-        #endif
+        let workspaceFile = workspacesFolder.appendingPathComponent("\(name).json")
+        if let data = try? JSONSerialization.data(withJSONObject: workspaceData, options: .prettyPrinted) {
+            try? data.write(to: workspaceFile)
+            #if DEBUG
+            print("[Workspace] Saved workspace: \(name)")
+            #endif
+        }
     }
 
     /// Load a workspace
     func loadWorkspace(name: String) -> Bool {
-        // TODO: Implement actual workspace loading
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            #if DEBUG
+            print("[Workspace] ERROR: Could not access documents directory")
+            #endif
+            return false
+        }
+
+        let workspacesFolder = documentsPath
+            .appendingPathComponent("ScreenshotEditor", isDirectory: true)
+            .appendingPathComponent("workspaces", isDirectory: true)
+
+        let workspaceFile = workspacesFolder.appendingPathComponent("\(name).json")
+
+        guard FileManager.default.fileExists(atPath: workspaceFile.path),
+              let data = try? Data(contentsOf: workspaceFile),
+              let workspace = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            #if DEBUG
+            print("[Workspace] Workspace not found: \(name)")
+            #endif
+            return false
+        }
+
+        // Close existing pins
+        closeAllPins()
+
+        // Load pins
+        guard let pinsData = workspace["pins"] as? [[String: Any]] else {
+            return false
+        }
+
+        for pinData in pinsData {
+            guard let idString = pinData["id"] as? String,
+                  let _ = UUID(uuidString: idString),
+                  let imageFile = pinData["imageFile"] as? String else {
+                continue
+            }
+
+            let imageFilePath = workspacesFolder.appendingPathComponent(imageFile)
+            guard let image = NSImage(contentsOf: imageFilePath) else {
+                continue
+            }
+
+            // Get position from saved frame
+            var position = CGPoint(x: 100, y: 100)
+            if let frame = pinData["frame"] as? [String: Double] {
+                position = CGPoint(x: frame["x"] ?? 100, y: frame["y"] ?? 100)
+            }
+
+            // Create pin
+            createPin(image: image, position: position, group: nil)
+        }
+
+        // Load groups
+        if let groups = workspace["groups"] as? [String: [String]] {
+            for (groupName, pinIds) in groups {
+                for idString in pinIds {
+                    if let pinId = UUID(uuidString: idString) {
+                        addToGroup(groupName, pinId: pinId)
+                    }
+                }
+            }
+        }
+
         #if DEBUG
-        print("[PinWindowManager] Loading workspace: \(name)")
+        print("[Workspace] Loaded workspace: \(name)")
         #endif
-        return false // Not yet implemented
+
+        return true
+    }
+
+    /// List available workspaces
+    func listWorkspaces() -> [String] {
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return []
+        }
+
+        let workspacesFolder = documentsPath
+            .appendingPathComponent("ScreenshotEditor", isDirectory: true)
+            .appendingPathComponent("workspaces", isDirectory: true)
+
+        guard let files = try? FileManager.default.contentsOfDirectory(atPath: workspacesFolder.path) else {
+            return []
+        }
+
+        return files
+            .filter { $0.hasSuffix(".json") }
+            .map { String($0.dropLast(5)) } // Remove .json extension
+    }
+
+    /// Delete a workspace
+    func deleteWorkspace(name: String) -> Bool {
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return false
+        }
+
+        let workspacesFolder = documentsPath
+            .appendingPathComponent("ScreenshotEditor", isDirectory: true)
+            .appendingPathComponent("workspaces", isDirectory: true)
+
+        let workspaceFile = workspacesFolder.appendingPathComponent("\(name).json")
+
+        do {
+            try FileManager.default.removeItem(at: workspaceFile)
+
+            // Also delete associated pin images
+            if let files = try? FileManager.default.contentsOfDirectory(atPath: workspacesFolder.path) {
+                for file in files where file.hasPrefix("\(name)_") && file.hasSuffix(".png") {
+                    let imageFile = workspacesFolder.appendingPathComponent(file)
+                    try? FileManager.default.removeItem(at: imageFile)
+                }
+            }
+
+            return true
+        } catch {
+            #if DEBUG
+            print("[Workspace] Failed to delete workspace: \(error)")
+            #endif
+            return false
+        }
     }
 
     // MARK: - Statistics
