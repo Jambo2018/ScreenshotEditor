@@ -11,8 +11,7 @@ import Carbon.HIToolbox
 class GlobalHotKeyMonitor {
 
     private var eventMonitor: EventMonitor?
-    private var isRegistered = false
-    private var handler: (() -> Void)?
+    private var bindings: [HotKeyBinding] = []
 
     /// Check if accessibility permissions are granted
     static func hasAccessibilityPermission() -> Bool {
@@ -36,24 +35,37 @@ class GlobalHotKeyMonitor {
         modifiers: NSEvent.ModifierFlags,
         handler: @escaping () -> Void
     ) {
-        unregister()
+        bindings.append(
+            HotKeyBinding(
+                key: key,
+                modifiers: modifiers.intersection(.deviceIndependentFlagsMask),
+                handler: handler
+            )
+        )
 
-        self.handler = handler
-        self.isRegistered = true
-
-        // Create an event monitor for keyDown events
-        eventMonitor = EventMonitor(modifiers: modifiers, key: key) { [weak self] event in
-            self?.handler?()
+        if eventMonitor == nil {
+            eventMonitor = EventMonitor { [weak self] event in
+                self?.handle(event: event)
+            }
+            eventMonitor?.start()
         }
-        eventMonitor?.start()
     }
 
     /// Unregister the global hotkey handler
     func unregister() {
         eventMonitor?.stop()
         eventMonitor = nil
-        isRegistered = false
-        handler = nil
+        bindings.removeAll()
+    }
+
+    private func handle(event: NSEvent) {
+        let normalizedFlags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+
+        for binding in bindings where binding.key.keyCode == event.keyCode {
+            if binding.modifiers == normalizedFlags {
+                binding.handler()
+            }
+        }
     }
 
     deinit {
@@ -67,13 +79,9 @@ class GlobalHotKeyMonitor {
 class EventMonitor {
 
     private var monitor: Any?
-    private let modifiers: NSEvent.ModifierFlags
-    private let key: KeyEquivalent
     private let handler: (NSEvent) -> Void
 
-    init(modifiers: NSEvent.ModifierFlags, key: KeyEquivalent, handler: @escaping (NSEvent) -> Void) {
-        self.modifiers = modifiers
-        self.key = key
+    init(handler: @escaping (NSEvent) -> Void) {
         self.handler = handler
     }
 
@@ -84,24 +92,8 @@ class EventMonitor {
     func start() {
         monitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self = self else { return }
-
-            print("[HotKey] Event received: keyCode=\(event.keyCode), modifiers=\(event.modifierFlags)")
-
-            // Check if the pressed key matches
-            if event.keyCode == self.key.keyCode {
-                // Check if modifiers match - use contains for flexibility
-                let hasCommand = event.modifierFlags.contains(.command)
-                let hasShift = event.modifierFlags.contains(.shift)
-
-                print("[HotKey] Key=\(self.key.character), hasCommand=\(hasCommand), hasShift=\(hasShift)")
-
-                if hasCommand && hasShift {
-                    print("[HotKey] Hotkey triggered!")
-                    self.handler(event)
-                }
-            }
+            self.handler(event)
         }
-        print("[HotKey] Monitor started for key: \(key.character) (keyCode: \(key.keyCode))")
     }
 
     func stop() {
@@ -110,6 +102,12 @@ class EventMonitor {
             self.monitor = nil
         }
     }
+}
+
+private struct HotKeyBinding {
+    let key: KeyEquivalent
+    let modifiers: NSEvent.ModifierFlags
+    let handler: () -> Void
 }
 
 // MARK: - Key Equivalent

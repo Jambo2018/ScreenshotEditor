@@ -369,6 +369,7 @@ class AppState: ObservableObject {
                                         showShadow: currentShowShadow,
                                         showBorder: currentShowBorder,
                                         deviceFrame: currentDeviceFrame,
+                                        annotations: self.annotations,
                                         format: format
                                     )
                                     
@@ -402,6 +403,7 @@ class AppState: ObservableObject {
                         showShadow: currentShowShadow,
                         showBorder: currentShowBorder,
                         deviceFrame: currentDeviceFrame,
+                        annotations: self.annotations,
                         format: format
                     )
 

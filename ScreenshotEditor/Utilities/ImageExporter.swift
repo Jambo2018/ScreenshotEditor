@@ -35,6 +35,7 @@ class ImageExporter {
         showShadow: Bool,
         showBorder: Bool,
         deviceFrame: DeviceFrame,
+        annotations: [Annotation],
         format: ImageFormat
     ) throws -> Data {
 
@@ -116,8 +117,13 @@ class ImageExporter {
 
         print("[Export] Final image processing complete")
 
+        let finalCanvasSize = CGSize(width: finalImage.width, height: finalImage.height)
+        let annotatedImage = annotations.isEmpty
+            ? finalImage
+            : renderAnnotations(annotations, onto: finalImage, canvasSize: finalCanvasSize)
+
         // Convert to data
-        return try imageToData(finalImage, format: format)
+        return try imageToData(annotatedImage, format: format)
     }
 
     // MARK: - Background Creation
@@ -453,6 +459,206 @@ class ImageExporter {
         context.strokePath()
     }
 
+    // MARK: - Annotation Rendering
+
+    private static func renderAnnotations(_ annotations: [Annotation], onto image: CGImage, canvasSize: CGSize) -> CGImage {
+        let context = CGContext(
+            data: nil,
+            width: image.width,
+            height: image.height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )!
+
+        let bounds = CGRect(origin: .zero, size: canvasSize)
+        context.draw(image, in: bounds)
+        context.setAllowsAntialiasing(true)
+        context.setShouldAntialias(true)
+
+        for annotation in annotations {
+            draw(annotation: annotation, in: context, canvasSize: canvasSize)
+        }
+
+        return context.makeImage() ?? image
+    }
+
+    private static func draw(annotation: Annotation, in context: CGContext, canvasSize: CGSize) {
+        switch annotation.type {
+        case .text:
+            drawText(annotation, in: context, canvasSize: canvasSize)
+        case .arrow:
+            drawArrow(annotation, in: context, canvasSize: canvasSize)
+        case .rectangle:
+            drawRectangle(annotation, in: context, canvasSize: canvasSize)
+        case .ellipse:
+            drawEllipse(annotation, in: context, canvasSize: canvasSize)
+        case .highlight:
+            drawHighlight(annotation, in: context, canvasSize: canvasSize)
+        case .blur:
+            drawBlur(annotation, in: context, canvasSize: canvasSize)
+        case .mosaic:
+            drawMosaic(annotation, in: context, canvasSize: canvasSize)
+        case .number:
+            drawNumber(annotation, in: context, canvasSize: canvasSize)
+        case .freehand:
+            drawFreehand(annotation, in: context, canvasSize: canvasSize)
+        }
+    }
+
+    private static func point(for normalizedPoint: CGPoint, canvasSize: CGSize) -> CGPoint {
+        CGPoint(
+            x: normalizedPoint.x * canvasSize.width,
+            y: canvasSize.height - (normalizedPoint.y * canvasSize.height)
+        )
+    }
+
+    private static func rect(for annotation: Annotation, canvasSize: CGSize) -> CGRect? {
+        guard let start = annotation.startPoint, let end = annotation.endPoint else { return nil }
+        let startPoint = point(for: start, canvasSize: canvasSize)
+        let endPoint = point(for: end, canvasSize: canvasSize)
+        return CGRect(
+            x: min(startPoint.x, endPoint.x),
+            y: min(startPoint.y, endPoint.y),
+            width: abs(endPoint.x - startPoint.x),
+            height: abs(endPoint.y - startPoint.y)
+        )
+    }
+
+    private static func drawText(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize) {
+        let drawPoint = point(for: annotation.position, canvasSize: canvasSize)
+        let font = NSFont.systemFont(ofSize: annotation.fontSize)
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: annotation.color.nsColor
+        ]
+        let string = NSAttributedString(string: annotation.text, attributes: attributes)
+        let textSize = string.size()
+
+        NSGraphicsContext.saveGraphicsState()
+        let graphicsContext = NSGraphicsContext(cgContext: context, flipped: false)
+        NSGraphicsContext.current = graphicsContext
+        string.draw(at: CGPoint(x: drawPoint.x - (textSize.width / 2), y: drawPoint.y - (textSize.height / 2)))
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    private static func drawArrow(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize) {
+        guard let start = annotation.startPoint, let end = annotation.endPoint else { return }
+        let startPoint = point(for: start, canvasSize: canvasSize)
+        let endPoint = point(for: end, canvasSize: canvasSize)
+        let color = annotation.color.cgColor
+
+        context.setStrokeColor(color)
+        context.setLineWidth(max(annotation.width, 1))
+        context.setLineCap(.round)
+        context.beginPath()
+        context.move(to: startPoint)
+        context.addLine(to: endPoint)
+        context.strokePath()
+
+        let angle = atan2(endPoint.y - startPoint.y, endPoint.x - startPoint.x)
+        let arrowLength = max(annotation.width * 6, 12)
+        let arrowAngle = CGFloat.pi / 6
+        let point1 = CGPoint(
+            x: endPoint.x - arrowLength * cos(angle - arrowAngle),
+            y: endPoint.y - arrowLength * sin(angle - arrowAngle)
+        )
+        let point2 = CGPoint(
+            x: endPoint.x - arrowLength * cos(angle + arrowAngle),
+            y: endPoint.y - arrowLength * sin(angle + arrowAngle)
+        )
+
+        context.beginPath()
+        context.move(to: endPoint)
+        context.addLine(to: point1)
+        context.move(to: endPoint)
+        context.addLine(to: point2)
+        context.strokePath()
+    }
+
+    private static func drawRectangle(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize) {
+        guard let rect = rect(for: annotation, canvasSize: canvasSize) else { return }
+        context.setStrokeColor(annotation.color.cgColor)
+        context.setLineWidth(max(annotation.width, 1))
+        context.stroke(rect)
+    }
+
+    private static func drawEllipse(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize) {
+        guard let rect = rect(for: annotation, canvasSize: canvasSize) else { return }
+        context.setStrokeColor(annotation.color.cgColor)
+        context.setLineWidth(max(annotation.width, 1))
+        context.strokeEllipse(in: rect)
+    }
+
+    private static func drawHighlight(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize) {
+        drawBrushStroke(annotation, in: context, canvasSize: canvasSize, color: annotation.color.nsColor.withAlphaComponent(annotation.width))
+    }
+
+    private static func drawBlur(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize) {
+        drawBrushStroke(annotation, in: context, canvasSize: canvasSize, color: NSColor.black.withAlphaComponent(0.25))
+    }
+
+    private static func drawMosaic(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize) {
+        drawBrushStroke(annotation, in: context, canvasSize: canvasSize, color: NSColor.black.withAlphaComponent(0.45))
+    }
+
+    private static func drawFreehand(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize) {
+        guard let start = annotation.startPoint, let end = annotation.endPoint else { return }
+        let startPoint = point(for: start, canvasSize: canvasSize)
+        let endPoint = point(for: end, canvasSize: canvasSize)
+
+        context.setStrokeColor(annotation.color.cgColor)
+        context.setLineWidth(max(annotation.width, 1))
+        context.setLineCap(.round)
+        context.beginPath()
+        context.move(to: startPoint)
+        context.addLine(to: endPoint)
+        context.strokePath()
+    }
+
+    private static func drawNumber(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize) {
+        let center = point(for: annotation.position, canvasSize: canvasSize)
+        let radius = max(annotation.fontSize * 0.8, 12)
+        let circleRect = CGRect(
+            x: center.x - radius,
+            y: center.y - radius,
+            width: radius * 2,
+            height: radius * 2
+        )
+
+        context.setFillColor(annotation.color.cgColor)
+        context.fillEllipse(in: circleRect)
+
+        let font = NSFont.boldSystemFont(ofSize: annotation.fontSize)
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: NSColor.white
+        ]
+        let string = NSAttributedString(string: annotation.text.isEmpty ? "1" : annotation.text, attributes: attributes)
+        let textSize = string.size()
+
+        NSGraphicsContext.saveGraphicsState()
+        let graphicsContext = NSGraphicsContext(cgContext: context, flipped: false)
+        NSGraphicsContext.current = graphicsContext
+        string.draw(at: CGPoint(x: center.x - (textSize.width / 2), y: center.y - (textSize.height / 2)))
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    private static func drawBrushStroke(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize, color: NSColor) {
+        guard let start = annotation.startPoint, let end = annotation.endPoint else { return }
+        let startPoint = point(for: start, canvasSize: canvasSize)
+        let endPoint = point(for: end, canvasSize: canvasSize)
+
+        context.setStrokeColor(color.cgColor)
+        context.setLineWidth(max(annotation.fontSize, 1))
+        context.setLineCap(.round)
+        context.beginPath()
+        context.move(to: startPoint)
+        context.addLine(to: endPoint)
+        context.strokePath()
+    }
+
     private static func imageToData(_ image: CGImage, format: ImageFormat) throws -> Data {
         let bitmapRep = NSBitmapImageRep(cgImage: image)
 
@@ -465,5 +671,20 @@ class ImageExporter {
             // WebP not natively supported, fallback to PNG
             return bitmapRep.representation(using: .png, properties: [:]) ?? Data()
         }
+    }
+}
+
+private extension CodableColor {
+    var nsColor: NSColor {
+        NSColor(
+            calibratedRed: red,
+            green: green,
+            blue: blue,
+            alpha: alpha
+        )
+    }
+
+    var cgColor: CGColor {
+        nsColor.cgColor
     }
 }
