@@ -39,16 +39,11 @@ struct CanvasView: View {
                             itemProviderForImage(image)
                         }
 
-                    // Device frame overlay
-                    if appState.deviceFrame != .none {
-                        deviceFrameOverlay(for: image, frame: appState.deviceFrame)
-                            .allowsHitTesting(false)
-                    }
-
                     // Annotation layer
                     AnnotationLayerView(sourceImage: image)
                         .environmentObject(appState)
                 }
+                .aspectRatio(canvasAspectRatio(for: image), contentMode: .fit)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(NSColor.controlBackgroundColor))
                 .onDrop(of: [.image, .fileURL], isTargeted: nil) { providers in
@@ -57,40 +52,7 @@ struct CanvasView: View {
                     return true
                 }
 
-                // Quick action toolbar
-                HStack(spacing: 12) {
-                    CanvasActionButton(icon: "circlebadge", title: "Corner") {
-                        // Toggle corner radius
-                        withAnimation {
-                            appState.cornerRadius = appState.cornerRadius > 0 ? 0 : 12
-                        }
-                    }
-
-                    CanvasActionButton(icon: "shadow", title: "Shadow") {
-                        withAnimation {
-                            appState.showShadow.toggle()
-                        }
-                    }
-
-                    CanvasActionButton(icon: "square", title: "Border") {
-                        withAnimation {
-                            appState.showBorder.toggle()
-                        }
-                    }
-
-                    CanvasActionButton(icon: "macbook.and.iphone", title: "Frame") {
-                        // Toggle device frame
-                        withAnimation {
-                            if appState.deviceFrame == .none {
-                                appState.deviceFrame = .iphone
-                            } else if appState.deviceFrame == .iphone {
-                                appState.deviceFrame = .macbook
-                            } else {
-                                appState.deviceFrame = .none
-                            }
-                        }
-                    }
-                }
+                CompactCanvasToolbar()
                 .padding(.vertical, 12)
                 .background(Color(NSColor.controlBackgroundColor))
 
@@ -106,7 +68,7 @@ struct CanvasView: View {
         switch appState.backgroundType {
         case .gradient:
             LinearGradient(
-                colors: appState.selectedGradient.colors,
+                colors: appState.activeGradientColors,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -129,6 +91,17 @@ struct CanvasView: View {
                 Color.secondary.opacity(0.2)
             }
         }
+    }
+
+    private func canvasAspectRatio(for image: NSImage) -> CGFloat {
+        if let ratio = appState.resolvedAspectRatioValue {
+            return ratio
+        }
+
+        let width = image.size.width + (appState.padding * 2)
+        let height = image.size.height + (appState.padding * 2)
+        guard height > 0 else { return 1 }
+        return width / height
     }
 
     private func itemProviderForImage(_ image: NSImage) -> NSItemProvider {
@@ -180,24 +153,77 @@ struct CanvasView: View {
 
 // MARK: - Canvas Action Button
 
-struct CanvasActionButton: View {
+struct CompactCanvasToolbar: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        HStack(spacing: 10) {
+            CompactCanvasToggle(
+                icon: "circlebadge",
+                title: "Corner",
+                isActive: appState.cornerRadius > 0
+            ) {
+                withAnimation {
+                    appState.cornerRadius = appState.cornerRadius > 0 ? 0 : 12
+                }
+            }
+
+            CompactCanvasToggle(
+                icon: "shadow",
+                title: "Shadow",
+                isActive: appState.showShadow
+            ) {
+                withAnimation {
+                    appState.showShadow.toggle()
+                }
+            }
+
+            CompactCanvasToggle(
+                icon: "square",
+                title: "Border",
+                isActive: appState.showBorder
+            ) {
+                withAnimation {
+                    appState.showBorder.toggle()
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(NSColor.windowBackgroundColor))
+        )
+    }
+}
+
+struct CompactCanvasToggle: View {
     let icon: String
     let title: String
+    let isActive: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 16))
+                    .font(.system(size: 13, weight: .semibold))
                 Text(title)
-                    .font(.caption2)
+                    .font(.caption)
+                    .fontWeight(.medium)
             }
-            .frame(width: 50, height: 50)
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(8)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                Capsule()
+                    .fill(isActive ? Color.accentColor.opacity(0.15) : Color(NSColor.controlBackgroundColor))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(isActive ? Color.accentColor : Color.gray.opacity(0.2), lineWidth: 1)
+            )
         }
-        .buttonStyle(.borderless)
+        .buttonStyle(.plain)
     }
 }
 

@@ -28,6 +28,9 @@ class AppState: ObservableObject {
     // Background settings
     @Published var backgroundType: BackgroundType = .gradient
     @Published var selectedGradient: GradientPreset = .ocean
+    @Published var useCustomGradient: Bool = false
+    @Published var customGradientStartColor: Color = .blue
+    @Published var customGradientEndColor: Color = .mint
     @Published var selectedColor: Color = .white
     @Published var backgroundImage: NSImage?
     @Published var blurAmount: Double = 0
@@ -38,6 +41,9 @@ class AppState: ObservableObject {
     @Published var showShadow: Bool = true
     @Published var showBorder: Bool = false
     @Published var deviceFrame: DeviceFrame = .none
+    @Published var exportAspectRatio: ExportAspectRatio = .original
+    @Published var customAspectRatioWidth: Double = 4
+    @Published var customAspectRatioHeight: Double = 5
 
     // Export settings
     @Published var autoCopyToClipboard: Bool = true
@@ -64,6 +70,30 @@ class AppState: ObservableObject {
 
     var hasScreenshot: Bool {
         selectedScreenshot != nil
+    }
+
+    var activeGradientColors: [Color] {
+        useCustomGradient ? [customGradientStartColor, customGradientEndColor] : selectedGradient.colors
+    }
+
+    var resolvedAspectRatioValue: CGFloat? {
+        switch exportAspectRatio {
+        case .original:
+            return nil
+        case .square:
+            return 1
+        case .portrait34:
+            return 3.0 / 4.0
+        case .landscape43:
+            return 4.0 / 3.0
+        case .portrait916:
+            return 9.0 / 16.0
+        case .landscape169:
+            return 16.0 / 9.0
+        case .custom:
+            guard customAspectRatioWidth > 0, customAspectRatioHeight > 0 else { return nil }
+            return customAspectRatioWidth / customAspectRatioHeight
+        }
     }
 
     // MARK: - Initialization
@@ -277,7 +307,7 @@ class AppState: ObservableObject {
         }
 
         print("[Export] Starting export from AppState")
-        print("[Export] Background: \(backgroundType), Gradient: \(selectedGradient.name)")
+        print("[Export] Background: \(backgroundType), Gradient: \(useCustomGradient ? "Custom" : selectedGradient.name)")
         print("[Export] Settings: blur=\(blurAmount), padding=\(padding), corner=\(cornerRadius)")
 
         isExporting = true
@@ -320,7 +350,7 @@ class AppState: ObservableObject {
         }
 
         let currentBackgroundType = backgroundType
-        let currentGradient = selectedGradient
+        let currentGradientColors = activeGradientColors
         let currentSolidColor = selectedColor
         let currentBlurAmount = blurAmount
         let currentPadding = padding
@@ -328,6 +358,8 @@ class AppState: ObservableObject {
         let currentShowShadow = showShadow
         let currentShowBorder = showBorder
         let currentDeviceFrame = deviceFrame
+        let currentAspectRatio = exportAspectRatio
+        let currentCustomAspectRatio = CGSize(width: customAspectRatioWidth, height: customAspectRatioHeight)
         let shouldCopyToClipboard = copyToClipboard ?? autoCopyToClipboard
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -360,7 +392,7 @@ class AppState: ObservableObject {
                                     let data = try ImageExporter.exportImage(
                                         sourceImage: image,
                                         backgroundType: currentBackgroundType,
-                                        gradient: currentGradient,
+                                        gradientColors: currentGradientColors,
                                         solidColor: currentSolidColor,
                                         backgroundImage: self.backgroundImage,
                                         blurAmount: currentBlurAmount,
@@ -369,6 +401,8 @@ class AppState: ObservableObject {
                                         showShadow: currentShowShadow,
                                         showBorder: currentShowBorder,
                                         deviceFrame: currentDeviceFrame,
+                                        aspectRatio: currentAspectRatio,
+                                        customAspectRatio: currentCustomAspectRatio,
                                         annotations: self.annotations,
                                         format: format
                                     )
@@ -394,7 +428,7 @@ class AppState: ObservableObject {
                     let data = try ImageExporter.exportImage(
                         sourceImage: images.first!.0,
                         backgroundType: currentBackgroundType,
-                        gradient: currentGradient,
+                        gradientColors: currentGradientColors,
                         solidColor: currentSolidColor,
                         backgroundImage: self.backgroundImage,
                         blurAmount: currentBlurAmount,
@@ -403,6 +437,8 @@ class AppState: ObservableObject {
                         showShadow: currentShowShadow,
                         showBorder: currentShowBorder,
                         deviceFrame: currentDeviceFrame,
+                        aspectRatio: currentAspectRatio,
+                        customAspectRatio: currentCustomAspectRatio,
                         annotations: self.annotations,
                         format: format
                     )
@@ -519,13 +555,17 @@ class AppState: ObservableObject {
             "settings": [
                 "backgroundType": backgroundType.rawValue,
                 "selectedGradient": selectedGradient.name,
+                "useCustomGradient": useCustomGradient,
                 "blurAmount": blurAmount,
                 "padding": padding,
                 "cornerRadius": cornerRadius,
                 "showShadow": showShadow,
                 "showBorder": showBorder,
                 "deviceFrame": deviceFrame.rawValue,
-                "autoCopyToClipboard": autoCopyToClipboard
+                "autoCopyToClipboard": autoCopyToClipboard,
+                "exportAspectRatio": exportAspectRatio.rawValue,
+                "customAspectRatioWidth": customAspectRatioWidth,
+                "customAspectRatioHeight": customAspectRatioHeight
             ]
         ]
         
@@ -669,27 +709,11 @@ struct GradientPreset: Identifiable, Hashable {
     static let forest = GradientPreset(name: "Forest", colors: [.green, .teal])
     static let fire = GradientPreset(name: "Fire", colors: [.red, .yellow])
     static let midnight = GradientPreset(name: "Midnight", colors: [.indigo, .black])
-    static let peach = GradientPreset(name: "Peach", colors: [.orange, .yellow, .pink])
-    static let coral = GradientPreset(name: "Coral", colors: [.red, .orange, .pink])
-    static let amber = GradientPreset(name: "Amber", colors: [.yellow, .orange, .red])
-    static let rose = GradientPreset(name: "Rose", colors: [.pink, .red, .purple])
-    static let honey = GradientPreset(name: "Honey", colors: [.yellow, .orange, .orange])
-    static let arctic = GradientPreset(name: "Arctic", colors: [.cyan, .blue, .purple])
-    static let mint = GradientPreset(name: "Mint", colors: [.green, .mint, .teal])
-    static let lavender = GradientPreset(name: "Lavender", colors: [.purple, .indigo, .pink])
-    static let sky = GradientPreset(name: "Sky", colors: [.blue, .cyan, .white])
-    static let oceanic = GradientPreset(name: "Oceanic", colors: [.teal, .blue, .indigo])
-    static let aurora = GradientPreset(name: "Aurora", colors: [.green, .cyan, .purple, .pink])
-    static let galaxy = GradientPreset(name: "Galaxy", colors: [.purple, .indigo, .black, .blue])
-    static let candy = GradientPreset(name: "Candy", colors: [.pink, .purple, .blue, .green])
-    static let sunrise = GradientPreset(name: "Sunrise", colors: [.purple, .pink, .orange, .yellow])
-    static let monochrome = GradientPreset(name: "Monochrome", colors: [.black, .gray, .white])
+    static let stone = GradientPreset(name: "Stone", colors: [.gray, .black])
+    static let mint = GradientPreset(name: "Mint", colors: [.green, .mint])
 
     static let presets = [
-        ocean, sunset, forest, fire, midnight,
-        peach, coral, amber, rose, honey,
-        arctic, mint, lavender, sky, oceanic,
-        aurora, galaxy, candy, sunrise, monochrome
+        ocean, sunset, forest, fire, midnight, stone, mint
     ]
 }
 
@@ -697,6 +721,16 @@ enum DeviceFrame: String, CaseIterable {
     case none = "None"
     case iphone = "iPhone"
     case macbook = "MacBook"
+}
+
+enum ExportAspectRatio: String, CaseIterable {
+    case original = "Original"
+    case square = "1:1"
+    case portrait34 = "3:4"
+    case landscape43 = "4:3"
+    case portrait916 = "9:16"
+    case landscape169 = "16:9"
+    case custom = "Custom"
 }
 
 // MARK: - Annotation Models

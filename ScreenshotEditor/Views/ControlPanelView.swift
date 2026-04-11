@@ -24,6 +24,10 @@ struct ControlPanelView: View {
 
                 Divider()
 
+                AspectRatioSection()
+
+                Divider()
+
                 // Export Section
                 ExportSection(exportFormat: $exportFormat)
             }
@@ -49,35 +53,57 @@ struct BackgroundSection: View {
                 }
             }
             .pickerStyle(.segmented)
+            .labelsHidden()
 
             // Gradient presets
             if appState.backgroundType == .gradient {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Gradient Presets")
+                    Text("Presets")
                         .font(.caption)
                         .foregroundColor(.secondary)
 
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         ForEach(GradientPreset.presets) { preset in
                             Button(action: {
                                 withAnimation {
                                     appState.selectedGradient = preset
+                                    appState.useCustomGradient = false
                                 }
                             }) {
-                                LinearGradient(
+                                gradientCard(
+                                    title: preset.name,
                                     colors: preset.colors,
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                                .frame(height: 50)
-                                .cornerRadius(6)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(appState.selectedGradient.id == preset.id ? Color.accentColor : Color.clear, lineWidth: 2)
+                                    isSelected: !appState.useCustomGradient && appState.selectedGradient.id == preset.id
                                 )
                             }
                             .buttonStyle(.plain)
                         }
+                    }
+
+                    Text("Custom Gradient")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 4)
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Button(action: {
+                            withAnimation {
+                                appState.useCustomGradient = true
+                            }
+                        }) {
+                            gradientCard(
+                                title: "Custom",
+                                colors: [appState.customGradientStartColor, appState.customGradientEndColor],
+                                isSelected: appState.useCustomGradient
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        HStack(spacing: 12) {
+                            ColorPicker("Start", selection: customGradientStartBinding)
+                            ColorPicker("End", selection: customGradientEndBinding)
+                        }
+                        .font(.caption)
                     }
                 }
             }
@@ -89,8 +115,8 @@ struct BackgroundSection: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
 
-                    LazyVGrid(columns: [GridItem(.fixed(28)), GridItem(.fixed(28)), GridItem(.fixed(28)), GridItem(.fixed(28)), GridItem(.fixed(28)), GridItem(.fixed(28)), GridItem(.fixed(28)), GridItem(.fixed(28))], spacing: 6) {
-                        ForEach([Color.red, Color.orange, Color.yellow, Color.green, Color.blue, Color.purple, Color.gray, Color.black], id: \.self) { color in
+                    LazyVGrid(columns: [GridItem(.fixed(28)), GridItem(.fixed(28)), GridItem(.fixed(28)), GridItem(.fixed(28)), GridItem(.fixed(28))], spacing: 8) {
+                        ForEach([Color.white, Color.black, Color.gray, Color.blue, Color.orange], id: \.self) { color in
                             Circle()
                                 .fill(color)
                                 .frame(width: 28, height: 28)
@@ -104,6 +130,10 @@ struct BackgroundSection: View {
                                     }
                                 }
                         }
+
+                        ColorPicker("", selection: $appState.selectedColor)
+                            .labelsHidden()
+                            .frame(width: 28, height: 28)
                     }
                 }
             }
@@ -168,6 +198,53 @@ struct BackgroundSection: View {
             appState.backgroundImage = nil
         }
     }
+
+    private var customGradientStartBinding: Binding<Color> {
+        Binding(
+            get: { appState.customGradientStartColor },
+            set: { newValue in
+                appState.customGradientStartColor = newValue
+                appState.useCustomGradient = true
+            }
+        )
+    }
+
+    private var customGradientEndBinding: Binding<Color> {
+        Binding(
+            get: { appState.customGradientEndColor },
+            set: { newValue in
+                appState.customGradientEndColor = newValue
+                appState.useCustomGradient = true
+            }
+        )
+    }
+
+    @ViewBuilder
+    private func gradientCard(title: String, colors: [Color], isSelected: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            LinearGradient(
+                colors: colors,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .frame(height: 44)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            Text(title)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(NSColor.controlBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.2), lineWidth: isSelected ? 2 : 1)
+        )
+    }
 }
 
 // MARK: - Sliders Section
@@ -185,6 +262,60 @@ struct SlidersSection: View {
 
             // Corner radius slider
             SliderRow(title: "Corner Radius", value: $appState.cornerRadius, range: 0...40, unit: "px")
+        }
+    }
+}
+
+// MARK: - Aspect Ratio Section
+
+struct AspectRatioSection: View {
+    @EnvironmentObject var appState: AppState
+
+    private let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Canvas Ratio")
+                .font(.headline)
+
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(ExportAspectRatio.allCases, id: \.self) { ratio in
+                    Button(action: {
+                        withAnimation {
+                            appState.exportAspectRatio = ratio
+                        }
+                    }) {
+                        Text(ratio.rawValue)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 34)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(appState.exportAspectRatio == ratio ? Color.accentColor.opacity(0.15) : Color(NSColor.controlBackgroundColor))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(appState.exportAspectRatio == ratio ? Color.accentColor : Color.gray.opacity(0.2), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if appState.exportAspectRatio == .custom {
+                HStack(spacing: 12) {
+                    Stepper(value: $appState.customAspectRatioWidth, in: 1...32, step: 1) {
+                        Text("W \(Int(appState.customAspectRatioWidth))")
+                            .font(.caption)
+                    }
+
+                    Stepper(value: $appState.customAspectRatioHeight, in: 1...32, step: 1) {
+                        Text("H \(Int(appState.customAspectRatioHeight))")
+                            .font(.caption)
+                    }
+                }
+            }
         }
     }
 }
