@@ -28,11 +28,15 @@ struct ContentView: View {
         }
         .toolbar {
             ToolbarItem(placement: .automatic) {
+                #if os(macOS)
+                ToolbarShareButton(appState: appState)
+                #else
                 Button(action: { appState.shareCurrent() }) {
                     Label("Share", systemImage: "square.and.arrow.up")
                 }
                 .disabled(!appState.hasScreenshot || appState.isExporting)
                 .help("Share to other apps")
+                #endif
             }
         }
         .sheet(isPresented: $showErrorSheet) {
@@ -45,3 +49,46 @@ struct ContentView: View {
     ContentView()
         .environmentObject(AppState())
 }
+
+#if os(macOS)
+struct ToolbarShareButton: NSViewRepresentable {
+    @ObservedObject var appState: AppState
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(appState: appState)
+    }
+
+    func makeNSView(context: Context) -> NSButton {
+        let button = NSButton()
+        button.isBordered = false
+        button.image = NSImage(
+            systemSymbolName: "square.and.arrow.up",
+            accessibilityDescription: "Share"
+        )
+        button.imagePosition = .imageOnly
+        button.controlSize = .large
+        button.contentTintColor = .labelColor
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.didPressShare(_:))
+        button.toolTip = "Share to other apps"
+        return button
+    }
+
+    func updateNSView(_ nsView: NSButton, context: Context) {
+        context.coordinator.appState = appState
+        nsView.isEnabled = appState.hasScreenshot && !appState.isExporting
+    }
+
+    final class Coordinator: NSObject {
+        var appState: AppState
+
+        init(appState: AppState) {
+            self.appState = appState
+        }
+
+        @objc func didPressShare(_ sender: NSButton) {
+            appState.shareCurrent(from: sender)
+        }
+    }
+}
+#endif

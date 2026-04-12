@@ -354,7 +354,7 @@ class AppState: ObservableObject {
         exportImages(images: [(image, screenshot.name)], format: format, copyToClipboard: copyToClipboard)
     }
 
-    func shareCurrent(format: ImageFormat = .png) {
+    func shareCurrent(format: ImageFormat = .png, from anchorView: NSView? = nil) {
         guard let screenshot = selectedScreenshot,
               let image = screenshot.image else {
             errorMessage = "No screenshot selected"
@@ -381,7 +381,7 @@ class AppState: ObservableObject {
 
                 DispatchQueue.main.async {
                     self.isExporting = false
-                    self.presentShareSheet(for: fileURL)
+                    self.presentShareSheet(for: fileURL, from: anchorView)
                 }
             } catch {
                 DispatchQueue.main.async {
@@ -600,15 +600,15 @@ class AppState: ObservableObject {
         return fileURL
     }
 
-    private func presentShareSheet(for fileURL: URL) {
+    private func presentShareSheet(for fileURL: URL, from anchorView: NSView?) {
         #if os(macOS)
-        guard let anchorView = NSApp.keyWindow?.contentView ?? NSApp.mainWindow?.contentView else {
+        guard let sourceView = anchorView ?? NSApp.keyWindow?.contentView ?? NSApp.mainWindow?.contentView else {
             errorMessage = "Unable to open the share sheet"
             return
         }
 
         let picker = NSSharingServicePicker(items: [fileURL])
-        picker.show(relativeTo: anchorView.bounds, of: anchorView, preferredEdge: .minY)
+        picker.show(relativeTo: sourceView.bounds, of: sourceView, preferredEdge: .maxY)
         #else
         errorMessage = "Share sheet is not available on this platform yet"
         #endif
