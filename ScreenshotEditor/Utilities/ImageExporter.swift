@@ -259,11 +259,11 @@ class ImageExporter {
         let background: CGImage?
 
         switch type {
+        case .none:
+            background = nil
         case .color:
             let gradientBackground = createGradientBackground(colors: gradientColors, size: size)
             background = applyGaussianBlur(to: gradientBackground, blurAmount: blurAmount, size: size)
-        case .blur:
-            background = createBlurBackground(blurAmount: blurAmount, size: size)
         case .image:
             let imageBackground = createImageBackground(backgroundImage: backgroundImage, size: size)
             background = applyGaussianBlur(to: imageBackground, blurAmount: blurAmount, size: size)
@@ -330,14 +330,6 @@ class ImageExporter {
         context.setFillColor(cgColor)
         context.fill(CGRect(origin: .zero, size: size))
         return context.makeImage()
-    }
-
-    private static func createBlurBackground(blurAmount: Double, size: CGSize) -> CGImage? {
-        guard let baseImage = createSolidBackground(color: Color(NSColor.windowBackgroundColor), size: size) else {
-            return nil
-        }
-
-        return applyGaussianBlur(to: baseImage, blurAmount: blurAmount, size: size) ?? baseImage
     }
 
     private static func applyGaussianBlur(to image: CGImage?, blurAmount: Double, size: CGSize) -> CGImage? {

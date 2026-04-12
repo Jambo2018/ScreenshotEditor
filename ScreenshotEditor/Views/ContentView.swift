@@ -12,42 +12,27 @@ struct ContentView: View {
     @State private var showErrorSheet: Bool = false
 
     var body: some View {
-        HSplitView {
+        HStack(spacing: 0) {
             CanvasView()
+
+            Divider()
 
             VStack(spacing: 0) {
                 ControlPanelView()
-                    .frame(minWidth: 260, idealWidth: 300, maxWidth: 340)
-
-                Divider()
-
-                AnnotationPanelView()
-                    .frame(minWidth: 260, idealWidth: 300, maxWidth: 340)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .frame(width: 288)
         }
         .onChange(of: appState.errorMessage) { _, newValue in
             showErrorSheet = newValue != nil
         }
         .toolbar {
             ToolbarItem(placement: .automatic) {
-                Button(action: { appState.startScreenCapture() }) {
-                    Label("Capture", systemImage: "camera.viewfinder")
+                Button(action: { appState.shareCurrent() }) {
+                    Label("Share", systemImage: "square.and.arrow.up")
                 }
-                .help("Capture screen (⌘⇧K)")
-            }
-
-            ToolbarItem(placement: .automatic) {
-                Button(action: { appState.importScreenshot() }) {
-                    Label("Import", systemImage: "square.and.arrow.down")
-                }
-                .help("Import a screenshot (⌘O)")
-            }
-
-            ToolbarItem(placement: .automatic) {
-                Button(action: { appState.exportCurrent() }) {
-                    Label("Export", systemImage: "square.and.arrow.up")
-                }
-                .help("Export image (⌘E)")
+                .disabled(!appState.hasScreenshot || appState.isExporting)
+                .help("Share to other apps")
             }
         }
         .sheet(isPresented: $showErrorSheet) {

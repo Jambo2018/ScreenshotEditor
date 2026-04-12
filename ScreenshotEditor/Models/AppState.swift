@@ -27,7 +27,7 @@ class AppState: ObservableObject {
 
     // Background settings
     @Published var backgroundType: BackgroundType = .color
-    @Published var selectedGradient: GradientPreset = .cobalt
+    @Published var selectedGradient: GradientPreset = .cool
     @Published var useCustomGradient: Bool = false
     @Published var customGradientStartColor: Color = .blue
     @Published var customGradientEndColor: Color = .mint
@@ -38,7 +38,7 @@ class AppState: ObservableObject {
     @Published var cornerRadius: Double = 12
 
     // Decoration settings
-    @Published var showShadow: Bool = true
+    @Published var showShadow: Bool = false
     @Published var showBorder: Bool = false
     @Published var deviceFrame: DeviceFrame = .none
     @Published var exportAspectRatio: ExportAspectRatio = .original
@@ -260,6 +260,30 @@ class AppState: ObservableObject {
 
     // MARK: - Actions
 
+    var canCaptureScreen: Bool {
+        #if os(macOS)
+        true
+        #else
+        false
+        #endif
+    }
+
+    func requestScreenCapture() {
+        #if os(macOS)
+        startScreenCapture()
+        #else
+        errorMessage = "Screen capture is not available on this platform yet"
+        #endif
+    }
+
+    func requestImageImport() {
+        #if os(macOS)
+        importScreenshot()
+        #else
+        errorMessage = "Image import is not available on this platform yet"
+        #endif
+    }
+
     func importScreenshot() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.png, .jpeg, .heic]
@@ -322,12 +346,50 @@ class AppState: ObservableObject {
         }
 
         print("[Export] Starting export from AppState")
-        print("[Export] Background: \(backgroundType), Gradient: \(useCustomGradient ? "Custom" : selectedGradient.name)")
+        print("[Export] Background: \(backgroundType.rawValue), Gradient: \(selectedGradient.name)")
         print("[Export] Settings: blur=\(blurAmount), padding=\(padding), corner=\(cornerRadius)")
 
         isExporting = true
 
         exportImages(images: [(image, screenshot.name)], format: format, copyToClipboard: copyToClipboard)
+    }
+
+    func shareCurrent(format: ImageFormat = .png) {
+        guard let screenshot = selectedScreenshot,
+              let image = screenshot.image else {
+            errorMessage = "No screenshot selected"
+            return
+        }
+
+        isExporting = true
+
+        let shareName = screenshot.name.isEmpty ? "Screenshot" : screenshot.name
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+
+            do {
+                let data = try self.renderedImageData(
+                    sourceImage: image,
+                    format: format
+                )
+                let fileURL = try self.writeTemporaryShareFile(
+                    data: data,
+                    baseName: shareName,
+                    format: format
+                )
+
+                DispatchQueue.main.async {
+                    self.isExporting = false
+                    self.presentShareSheet(for: fileURL)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isExporting = false
+                    self.errorMessage = "Share failed: \(error.localizedDescription)"
+                }
+            }
+        }
     }
     
     func exportBatch(format: ImageFormat = .png, copyToClipboard: Bool = false) {
@@ -369,8 +431,6 @@ class AppState: ObservableObject {
         let currentBlurAmount = blurAmount
         let currentPadding = padding
         let currentCornerRadius = cornerRadius
-        let currentShowShadow = showShadow
-        let currentShowBorder = showBorder
         let currentDeviceFrame = deviceFrame
         let currentAspectRatio = exportAspectRatio
         let currentCustomAspectRatio = CGSize(width: customAspectRatioWidth, height: customAspectRatioHeight)
@@ -403,21 +463,17 @@ class AppState: ObservableObject {
                             var exportedCount = 0
                             for (image, name) in images {
                                 do {
-                                    let data = try ImageExporter.exportImage(
+                                    let data = try self.renderedImageData(
                                         sourceImage: image,
+                                        format: format,
                                         backgroundType: currentBackgroundType,
                                         gradientColors: currentGradientColors,
-                                        backgroundImage: self.backgroundImage,
                                         blurAmount: currentBlurAmount,
                                         padding: currentPadding,
                                         cornerRadius: currentCornerRadius,
-                                        showShadow: currentShowShadow,
-                                        showBorder: currentShowBorder,
                                         deviceFrame: currentDeviceFrame,
                                         aspectRatio: currentAspectRatio,
-                                        customAspectRatio: currentCustomAspectRatio,
-                                        annotations: self.annotations,
-                                        format: format
+                                        customAspectRatio: currentCustomAspectRatio
                                     )
                                     
                                     let filename = "\(name)_edited\(format.fileExtension)"
@@ -438,21 +494,17 @@ class AppState: ObservableObject {
                     }
                 } else {
                     // Single export: show save panel
-                    let data = try ImageExporter.exportImage(
+                    let data = try self.renderedImageData(
                         sourceImage: images.first!.0,
+                        format: format,
                         backgroundType: currentBackgroundType,
                         gradientColors: currentGradientColors,
-                        backgroundImage: self.backgroundImage,
                         blurAmount: currentBlurAmount,
                         padding: currentPadding,
                         cornerRadius: currentCornerRadius,
-                        showShadow: currentShowShadow,
-                        showBorder: currentShowBorder,
                         deviceFrame: currentDeviceFrame,
                         aspectRatio: currentAspectRatio,
-                        customAspectRatio: currentCustomAspectRatio,
-                        annotations: self.annotations,
-                        format: format
+                        customAspectRatio: currentCustomAspectRatio
                     )
 
                     print("[Export] Export succeeded, data size: \(data.count) bytes")
@@ -504,6 +556,62 @@ class AppState: ObservableObject {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setData(data, forType: .png)
+    }
+
+    private func renderedImageData(
+        sourceImage: NSImage,
+        format: ImageFormat,
+        backgroundType: BackgroundType? = nil,
+        gradientColors: [Color]? = nil,
+        blurAmount: Double? = nil,
+        padding: Double? = nil,
+        cornerRadius: Double? = nil,
+        deviceFrame: DeviceFrame? = nil,
+        aspectRatio: ExportAspectRatio? = nil,
+        customAspectRatio: CGSize? = nil
+    ) throws -> Data {
+        try ImageExporter.exportImage(
+            sourceImage: sourceImage,
+            backgroundType: backgroundType ?? self.backgroundType,
+            gradientColors: gradientColors ?? activeGradientColors,
+            backgroundImage: backgroundImage,
+            blurAmount: blurAmount ?? self.blurAmount,
+            padding: padding ?? self.padding,
+            cornerRadius: cornerRadius ?? self.cornerRadius,
+            showShadow: false,
+            showBorder: false,
+            deviceFrame: deviceFrame ?? self.deviceFrame,
+            aspectRatio: aspectRatio ?? exportAspectRatio,
+            customAspectRatio: customAspectRatio ?? CGSize(width: customAspectRatioWidth, height: customAspectRatioHeight),
+            annotations: annotations,
+            format: format
+        )
+    }
+
+    private func writeTemporaryShareFile(data: Data, baseName: String, format: ImageFormat) throws -> URL {
+        let sanitizedName = baseName
+            .replacingOccurrences(of: format.fileExtension, with: "")
+            .replacingOccurrences(of: "/", with: "-")
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+        let fileURL = temporaryDirectory
+            .appendingPathComponent("\(sanitizedName)-share-\(UUID().uuidString)")
+            .appendingPathExtension(String(format.fileExtension.dropFirst()))
+        try data.write(to: fileURL, options: .atomic)
+        return fileURL
+    }
+
+    private func presentShareSheet(for fileURL: URL) {
+        #if os(macOS)
+        guard let anchorView = NSApp.keyWindow?.contentView ?? NSApp.mainWindow?.contentView else {
+            errorMessage = "Unable to open the share sheet"
+            return
+        }
+
+        let picker = NSSharingServicePicker(items: [fileURL])
+        picker.show(relativeTo: anchorView.bounds, of: anchorView, preferredEdge: .minY)
+        #else
+        errorMessage = "Share sheet is not available on this platform yet"
+        #endif
     }
 
     func deleteScreenshot(_ screenshot: Screenshot) {
@@ -701,7 +809,7 @@ extension ImageFormat {
 
 enum BackgroundType: String, CaseIterable {
     case color = "Color"
-    case blur = "Blur"
+    case none = "None"
     case image = "Image"
 }
 
@@ -710,14 +818,18 @@ struct GradientPreset: Identifiable, Hashable {
     let name: String
     let colors: [Color]
 
-    static let cobalt = GradientPreset(name: "Cobalt", colors: [.blue])
-    static let graphite = GradientPreset(name: "Graphite", colors: [.gray])
-    static let coral = GradientPreset(name: "Coral", colors: [.orange, .pink])
-    static let tide = GradientPreset(name: "Tide", colors: [.cyan, .teal])
-    static let ember = GradientPreset(name: "Ember", colors: [.red, .orange])
+    static let desktop = GradientPreset(name: "Desktop", colors: [Color(red: 0.16, green: 0.52, blue: 0.84), Color(red: 0.38, green: 0.72, blue: 0.73)])
+    static let cool = GradientPreset(name: "Cool", colors: [Color(red: 0.20, green: 0.59, blue: 0.85), Color(red: 0.40, green: 0.74, blue: 0.75)])
+    static let beach = GradientPreset(name: "Beach", colors: [Color(red: 0.09, green: 0.71, blue: 0.73), Color(red: 0.10, green: 0.75, blue: 0.57)])
+    static let violet = GradientPreset(name: "Violet", colors: [Color(red: 0.32, green: 0.42, blue: 0.85), Color(red: 0.49, green: 0.33, blue: 0.86)])
+    static let rose = GradientPreset(name: "Rose", colors: [Color(red: 0.99, green: 0.61, blue: 0.43), Color(red: 0.59, green: 0.78, blue: 0.89)])
+    static let love = GradientPreset(name: "Love", colors: [Color(red: 0.47, green: 0.14, blue: 0.77), Color(red: 0.96, green: 0.26, blue: 0.69)])
+    static let flower = GradientPreset(name: "Flower", colors: [Color(red: 0.66, green: 0.73, blue: 0.97), Color(red: 0.90, green: 0.70, blue: 0.94)])
+    static let sky = GradientPreset(name: "Sky", colors: [Color(red: 0.40, green: 0.74, blue: 0.95), Color(red: 0.55, green: 0.90, blue: 0.88)])
 
     static let presets = [
-        cobalt, graphite, coral, tide, ember
+        desktop, cool, beach, violet, rose,
+        love, flower, sky
     ]
 }
 

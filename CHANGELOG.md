@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.11.0] - 2026-04-12
+
+### Added
+- Added a system share action in the top-right toolbar that shares the current rendered image to other apps via the macOS share sheet.
+- Added an editing bottom action bar that contains capture, import, and annotation tool selection during active editing.
+
+### Changed
+- Moved capture and import actions out of the toolbar and into the main canvas experience.
+- Converted the editing toolbar from a floating overlay into a real bottom operation bar so it no longer covers the preview.
+- Simplified the annotation side panel so it focuses on tool settings and annotation management instead of duplicating tool picking.
+- Prepared the app entry flow for future iPhone/iPad support by routing capture/import through higher-level request methods.
+
+### Fixed
+- Ensured sharing uses the same rendering pipeline as export so shared results match the preview.
+
 ## [0.1.10.0] - 2026-04-12
 
 ### Fixed

@@ -13,7 +13,7 @@ struct ControlPanelView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 10) {
                 // Background Section
                 BackgroundSection()
 
@@ -31,7 +31,7 @@ struct ControlPanelView: View {
                 // Export Section
                 ExportSection(exportFormat: $exportFormat)
             }
-            .padding(12)
+            .padding(10)
         }
     }
 }
@@ -42,112 +42,61 @@ struct BackgroundSection: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Background")
                 .font(.headline)
 
-            // Background type picker
-            Picker("Type", selection: $appState.backgroundType) {
-                ForEach(BackgroundType.allCases, id: \.self) { type in
-                    Text(type.rawValue).tag(type)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-
-            // Unified color background (single color or gradient)
-            if appState.backgroundType == .color {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Presets")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
-                        ForEach(GradientPreset.presets) { preset in
-                            Button(action: {
-                                withAnimation {
-                                    appState.selectedGradient = preset
-                                    appState.useCustomGradient = false
-                                }
-                            }) {
-                                gradientCard(
-                                    title: preset.name,
-                                    colors: preset.colors,
-                                    isSelected: !appState.useCustomGradient && appState.selectedGradient.id == preset.id
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-
-                    Text("Custom")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 2)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Button(action: {
-                            withAnimation {
-                                appState.useCustomGradient = true
-                            }
-                        }) {
-                            gradientCard(
-                                title: "Custom",
-                                colors: appState.activeGradientColors,
-                                isSelected: appState.useCustomGradient
+            LazyVGrid(columns: swatchColumns, spacing: 8) {
+                ForEach(GradientPreset.presets) { preset in
+                    Button(action: { selectPreset(preset) }) {
+                        SwatchCard(
+                            title: preset.name,
+                            isSelected: isPresetSelected(preset)
+                        ) {
+                            LinearGradient(
+                                colors: preset.colors,
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
                         }
-                        .buttonStyle(.plain)
+                    }
+                    .buttonStyle(.plain)
+                }
 
-                        HStack(spacing: 12) {
-                            ColorPicker("A", selection: customGradientStartBinding)
-                            if appState.useSecondCustomGradientColor {
-                                ColorPicker("B", selection: customGradientEndBinding)
-                            }
-                        }
-                        .font(.caption)
-
-                        Toggle("Second Color (Gradient)", isOn: secondColorBinding)
-                            .font(.caption)
+                Button(action: selectNoneBackground) {
+                    SwatchCard(title: "None", isSelected: appState.backgroundType == .none) {
+                        CheckerboardView()
                     }
                 }
-            }
+                .buttonStyle(.plain)
 
-            // Image picker (for custom image mode)
-            if appState.backgroundType == .image {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Custom Background")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    Button(action: selectBackgroundImage) {
-                        HStack {
-                            Image(systemName: "photo")
-                            Text(appState.backgroundImage != nil ? "Change Image..." : "Choose Image...")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-
-                    if let backgroundImage = appState.backgroundImage {
-                        HStack {
-                            Image(nsImage: backgroundImage)
+                Button(action: selectBackgroundImage) {
+                    SwatchCard(title: "More...", isSelected: appState.backgroundType == .image && appState.backgroundImage != nil) {
+                        if let image = appState.backgroundImage {
+                            Image(nsImage: image)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: 60, height: 60)
-                                .cornerRadius(6)
-                                .clipped()
-
-                            Button(action: clearBackgroundImage) {
-                                Image(systemName: "trash")
-                                    .foregroundColor(.red)
-                            }
-                            .buttonStyle(.borderless)
+                        } else {
+                            LinearGradient(
+                                colors: [Color(red: 0.95, green: 0.76, blue: 0.60), Color(red: 0.67, green: 0.82, blue: 0.95)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                            .overlay(
+                                Image(systemName: "ellipsis")
+                                    .font(.headline)
+                                    .foregroundColor(.white.opacity(0.9))
+                            )
                         }
                     }
                 }
+                .buttonStyle(.plain)
             }
         }
+    }
+
+    private var swatchColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(minimum: 44, maximum: 64), spacing: 8), count: 5)
     }
 
     private func selectBackgroundImage() {
@@ -155,89 +104,87 @@ struct BackgroundSection: View {
         panel.allowedContentTypes = [.png, .jpeg, .heic, .tiff]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
-        panel.message = "Select a background image"
+        panel.message = "Select background image"
 
         panel.begin { response in
             guard response == .OK, let url = panel.url,
                   let image = NSImage(contentsOf: url) else { return }
             DispatchQueue.main.async {
                 withAnimation {
+                    appState.backgroundType = .image
                     appState.backgroundImage = image
+                    appState.useCustomGradient = false
                 }
             }
         }
     }
 
-    private func clearBackgroundImage() {
+    private func selectPreset(_ preset: GradientPreset) {
         withAnimation {
+            appState.backgroundType = .color
+            appState.selectedGradient = preset
             appState.backgroundImage = nil
+            appState.useCustomGradient = false
         }
     }
 
-    private var customGradientStartBinding: Binding<Color> {
-        Binding(
-            get: { appState.customGradientStartColor },
-            set: { newValue in
-                appState.customGradientStartColor = newValue
-                appState.useCustomGradient = true
-            }
-        )
+    private func selectNoneBackground() {
+        withAnimation {
+            appState.backgroundType = .none
+            appState.backgroundImage = nil
+            appState.useCustomGradient = false
+        }
     }
 
-    private var customGradientEndBinding: Binding<Color> {
-        Binding(
-            get: { appState.customGradientEndColor },
-            set: { newValue in
-                appState.customGradientEndColor = newValue
-                appState.useCustomGradient = true
-                appState.useSecondCustomGradientColor = true
-            }
-        )
+    private func isPresetSelected(_ preset: GradientPreset) -> Bool {
+        appState.backgroundType == .color && appState.selectedGradient.id == preset.id
     }
+}
 
-    private var secondColorBinding: Binding<Bool> {
-        Binding(
-            get: { appState.useSecondCustomGradientColor },
-            set: { newValue in
-                appState.useSecondCustomGradientColor = newValue
-                appState.useCustomGradient = true
-            }
-        )
-    }
+private struct SwatchCard<Preview: View>: View {
+    let title: String
+    let isSelected: Bool
+    @ViewBuilder let preview: () -> Preview
 
-    @ViewBuilder
-    private func gradientCard(title: String, colors: [Color], isSelected: Bool) -> some View {
-        let previewColors = colors.isEmpty ? [Color.white] : colors
-        VStack(alignment: .leading, spacing: 4) {
-            if previewColors.count == 1 {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(previewColors[0])
-                    .frame(height: 30)
-            } else {
-                LinearGradient(
-                    colors: previewColors,
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+    var body: some View {
+        VStack(spacing: 4) {
+            preview()
+                .frame(width: 52, height: 52)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.28), lineWidth: isSelected ? 2.0 : 1.0)
                 )
-                .frame(height: 30)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
 
             Text(title)
                 .font(.caption2)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
+                .frame(width: 52)
         }
-        .padding(6)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(NSColor.controlBackgroundColor))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.2), lineWidth: isSelected ? 2 : 1)
-        )
+    }
+}
+
+private struct CheckerboardView: View {
+    var body: some View {
+        Canvas { context, size in
+            let tileSize: CGFloat = 8
+            let rows = Int(ceil(size.height / tileSize))
+            let cols = Int(ceil(size.width / tileSize))
+
+            for row in 0..<rows {
+                for col in 0..<cols where (row + col).isMultiple(of: 2) {
+                    let rect = CGRect(
+                        x: CGFloat(col) * tileSize,
+                        y: CGFloat(row) * tileSize,
+                        width: tileSize,
+                        height: tileSize
+                    )
+                    context.fill(Path(rect), with: .color(Color.gray.opacity(0.28)))
+                }
+            }
+        }
+        .background(Color.white.opacity(0.82))
     }
 }
 
@@ -254,18 +201,8 @@ struct SlidersSection: View {
             // Padding slider
             SliderRow(title: "Padding", value: $appState.padding, range: 0...200, unit: "px")
 
-            HStack(alignment: .top, spacing: 10) {
-                SliderRow(title: "Rounded", value: $appState.cornerRadius, range: 0...40, unit: "px")
-                SliderRow(title: "Blur", value: $appState.blurAmount, range: 0...100, unit: "%")
-            }
-
-            HStack(spacing: 8) {
-                Toggle("Shadow", isOn: $appState.showShadow)
-                    .toggleStyle(.button)
-                Toggle("Border", isOn: $appState.showBorder)
-                    .toggleStyle(.button)
-            }
-            .font(.caption)
+            SliderRow(title: "Rounded", value: $appState.cornerRadius, range: 0...40, unit: "px")
+            SliderRow(title: "BG Blur", value: $appState.blurAmount, range: 0...100, unit: "%")
         }
     }
 }

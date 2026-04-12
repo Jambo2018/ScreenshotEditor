@@ -11,9 +11,12 @@ import SwiftUI
 @main
 struct ScreenshotEditorApp: App {
     @StateObject private var appState = AppState()
+    #if os(macOS)
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    #endif
 
     var body: some Scene {
+        #if os(macOS)
         WindowGroup {
             ContentView()
                 .environmentObject(appState)
@@ -23,17 +26,17 @@ struct ScreenshotEditorApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("Capture Screen...") {
-                    appState.startScreenCapture()
+                    appState.requestScreenCapture()
                 }
                 .keyboardShortcut("k", modifiers: [.command, .shift])
 
                 Button("Import Screenshot...") {
-                    appState.importScreenshot()
+                    appState.requestImageImport()
                 }
                 .keyboardShortcut("o", modifiers: .command)
 
-                Button("Export...") {
-                    appState.exportCurrent()
+                Button("Share...") {
+                    appState.shareCurrent()
                 }
                 .keyboardShortcut("e", modifiers: .command)
             }
@@ -42,11 +45,18 @@ struct ScreenshotEditorApp: App {
         Settings {
             SettingsView()
         }
+        #else
+        WindowGroup {
+            ContentView()
+                .environmentObject(appState)
+        }
+        #endif
     }
 }
 
 // MARK: - App Delegate
 
+#if os(macOS)
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Activate the app on launch to receive global events
@@ -54,3 +64,4 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 }
+#endif

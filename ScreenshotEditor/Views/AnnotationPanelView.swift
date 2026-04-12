@@ -19,7 +19,7 @@ struct AnnotationPanelView: View {
                 }
             }) {
                 HStack {
-                    Label("标注工具", systemImage: "wand.and.rays")
+                    Label("标注设置", systemImage: "wand.and.rays")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                     Spacer()
@@ -37,10 +37,6 @@ struct AnnotationPanelView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        ToolPickerSection()
-
-                        Divider()
-
                         ToolSettingsSection()
 
                         Divider()
@@ -55,50 +51,6 @@ struct AnnotationPanelView: View {
     }
 }
 
-// MARK: - Tool Picker Section
-
-struct ToolPickerSection: View {
-    @EnvironmentObject var appState: AppState
-    private let visibleTools: [AnnotationTool] = [.select, .rectangle, .text, .arrow, .mosaic, .freehand]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("工具")
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                ForEach(visibleTools, id: \.self) { tool in
-                    Button(action: {
-                        withAnimation {
-                            appState.selectedAnnotationTool = tool
-                        }
-                    }) {
-                        VStack(spacing: 4) {
-                            Image(systemName: tool.icon)
-                                .font(.system(size: 14))
-                            Text(tool.title)
-                                .font(.caption2)
-                                .lineLimit(1)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(appState.selectedAnnotationTool == tool ? Color.accentColor.opacity(0.2) : Color.clear)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(appState.selectedAnnotationTool == tool ? Color.accentColor : Color.gray.opacity(0.3), lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Tool Settings Section
 
 struct ToolSettingsSection: View {
@@ -106,9 +58,17 @@ struct ToolSettingsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("设置")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            HStack {
+                Text("当前工具")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                Label(appState.selectedAnnotationTool.title, systemImage: appState.selectedAnnotationTool.icon)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
 
             switch appState.selectedAnnotationTool {
             case .select:
