@@ -33,6 +33,77 @@ class ImageExporter {
         annotations: [Annotation],
         format: ImageFormat
     ) throws -> Data {
+        let renderedImage = try renderCGImage(
+            sourceImage: sourceImage,
+            backgroundType: backgroundType,
+            gradientColors: gradientColors,
+            backgroundImage: backgroundImage,
+            blurAmount: blurAmount,
+            padding: padding,
+            cornerRadius: cornerRadius,
+            showShadow: showShadow,
+            showBorder: showBorder,
+            deviceFrame: deviceFrame,
+            aspectRatio: aspectRatio,
+            customAspectRatio: customAspectRatio,
+            annotations: annotations
+        )
+
+        return try imageToData(renderedImage, format: format)
+    }
+
+    static func renderImage(
+        sourceImage: NSImage,
+        backgroundType: BackgroundType,
+        gradientColors: [Color],
+        backgroundImage: NSImage?,
+        blurAmount: Double,
+        padding: Double,
+        cornerRadius: Double,
+        showShadow: Bool,
+        showBorder: Bool,
+        deviceFrame: DeviceFrame,
+        aspectRatio: ExportAspectRatio,
+        customAspectRatio: CGSize,
+        annotations: [Annotation] = []
+    ) throws -> NSImage {
+        let renderedImage = try renderCGImage(
+            sourceImage: sourceImage,
+            backgroundType: backgroundType,
+            gradientColors: gradientColors,
+            backgroundImage: backgroundImage,
+            blurAmount: blurAmount,
+            padding: padding,
+            cornerRadius: cornerRadius,
+            showShadow: showShadow,
+            showBorder: showBorder,
+            deviceFrame: deviceFrame,
+            aspectRatio: aspectRatio,
+            customAspectRatio: customAspectRatio,
+            annotations: annotations
+        )
+
+        return NSImage(
+            cgImage: renderedImage,
+            size: NSSize(width: renderedImage.width, height: renderedImage.height)
+        )
+    }
+
+    private static func renderCGImage(
+        sourceImage: NSImage,
+        backgroundType: BackgroundType,
+        gradientColors: [Color],
+        backgroundImage: NSImage?,
+        blurAmount: Double,
+        padding: Double,
+        cornerRadius: Double,
+        showShadow: Bool,
+        showBorder: Bool,
+        deviceFrame: DeviceFrame,
+        aspectRatio: ExportAspectRatio,
+        customAspectRatio: CGSize,
+        annotations: [Annotation]
+    ) throws -> CGImage {
 
         guard let cgImage = sourceImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             throw ExportError.noImage
@@ -112,7 +183,7 @@ class ImageExporter {
             ? framedImage
             : renderAnnotations(annotations, onto: framedImage, canvasSize: finalCanvasSize)
 
-        return try imageToData(annotatedImage, format: format)
+        return annotatedImage
     }
 
     // MARK: - Layout
@@ -189,11 +260,13 @@ class ImageExporter {
 
         switch type {
         case .color:
-            background = createGradientBackground(colors: gradientColors, size: size)
+            let gradientBackground = createGradientBackground(colors: gradientColors, size: size)
+            background = applyGaussianBlur(to: gradientBackground, blurAmount: blurAmount, size: size)
         case .blur:
             background = createBlurBackground(blurAmount: blurAmount, size: size)
         case .image:
-            background = createImageBackground(backgroundImage: backgroundImage, size: size)
+            let imageBackground = createImageBackground(backgroundImage: backgroundImage, size: size)
+            background = applyGaussianBlur(to: imageBackground, blurAmount: blurAmount, size: size)
         }
 
         if let background {
@@ -264,17 +337,24 @@ class ImageExporter {
             return nil
         }
 
-        let ciImage = CIImage(cgImage: baseImage)
+        return applyGaussianBlur(to: baseImage, blurAmount: blurAmount, size: size) ?? baseImage
+    }
+
+    private static func applyGaussianBlur(to image: CGImage?, blurAmount: Double, size: CGSize) -> CGImage? {
+        guard let image else { return nil }
+        guard blurAmount > 0 else { return image }
+
+        let ciImage = CIImage(cgImage: image)
         let cropRect = CGRect(origin: .zero, size: size)
         guard let blurFilter = CIFilter(name: "CIGaussianBlur") else {
-            return baseImage
+            return image
         }
 
         blurFilter.setValue(ciImage, forKey: kCIInputImageKey)
         blurFilter.setValue(blurAmount / 10, forKey: kCIInputRadiusKey)
 
         guard let output = blurFilter.outputImage?.cropped(to: cropRect) else {
-            return baseImage
+            return image
         }
 
         let context = CIContext(options: [:])

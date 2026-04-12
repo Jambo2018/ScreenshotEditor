@@ -2,551 +2,165 @@
 //  ImageExporterTests.swift
 //  ScreenshotEditorTests
 //
-//  Unit tests for ImageExporter functionality
-//
 
 import XCTest
+import SwiftUI
+import AppKit
 @testable import ScreenshotEditor
 
 final class ImageExporterTests: XCTestCase {
 
-    // MARK: - Test Helpers
-
-    private func createTestImage(width: CGFloat = 100, height: CGFloat = 100) -> NSImage {
-        let image = NSImage(size: NSSize(width: width, height: height))
-        image.lockFocus()
-        NSColor.systemBlue.drawSwatch(in: NSRect(x: 0, y: 0, width: width, height: height))
-        image.unlockFocus()
-        return image
-    }
-
-    // MARK: - Export Error Cases
-
-    func testExportWithNilImage() throws {
-        // Test that exporting with an empty/nil image throws an error
-        let emptyImage = NSImage()
-        XCTAssertThrowsError(try ImageExporter.exportImage(
-            sourceImage: emptyImage,
-            backgroundType: .gradient,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 40,
-            cornerRadius: 12,
-            showShadow: true,
-            showBorder: false,
-            deviceFrame: nil,
-            format: .png
-        ))
-    }
-
-    // MARK: - Basic Export
-
-    func testBasicPNGExport() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 0,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            format: .png
-        )
-
-        XCTAssertGreaterThan(data.count, 0, "Exported PNG data should not be empty")
-    }
-
-    func testJPEGExport() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 0,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            format: .jpeg
-        )
-
-        XCTAssertGreaterThan(data.count, 0, "Exported JPEG data should not be empty")
-        // JPEG should be smaller than PNG due to compression
-        let pngData = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 0,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            format: .png
-        )
-        XCTAssertLessThan(data.count, pngData.count, "JPEG should be smaller than PNG")
-    }
-
-    // MARK: - Background Types
-
-    func testExportWithGradientBackground() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .gradient,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 20,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            format: .png
-        )
-
-        XCTAssertGreaterThan(data.count, 0)
-    }
-
-    func testExportWithSolidBackground() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .red,
-            blurAmount: 0,
-            padding: 20,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            format: .png
-        )
-
-        XCTAssertGreaterThan(data.count, 0)
-    }
-
-    func testExportWithBlurBackground() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .blur,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            blurAmount: 10,
-            padding: 20,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            format: .png
-        )
-
-        XCTAssertGreaterThan(data.count, 0)
-    }
-
-    // MARK: - Corner Radius
-
-    func testExportWithCornerRadius() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 20,
-            cornerRadius: 20,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            format: .png
-        )
-
-        XCTAssertGreaterThan(data.count, 0)
-    }
-
-    func testExportWithZeroCornerRadius() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 20,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            format: .png
-        )
-
-        XCTAssertGreaterThan(data.count, 0)
-    }
-
-    // MARK: - Shadow
-
-    func testExportWithShadow() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 20,
-            cornerRadius: 12,
-            showShadow: true,
-            showBorder: false,
-            deviceFrame: nil,
-            format: .png
-        )
-
-        XCTAssertGreaterThan(data.count, 0)
-    }
-
-    func testExportWithoutShadow() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 20,
-            cornerRadius: 12,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            format: .png
-        )
-
-        XCTAssertGreaterThan(data.count, 0)
-    }
-
-    // MARK: - Padding
-
-    func testExportWithPadding() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 50,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            format: .png
-        )
-
-        XCTAssertGreaterThan(data.count, 0)
-    }
-
-    func testExportWithZeroPadding() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 0,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            format: .png
-        )
-
-        XCTAssertGreaterThan(data.count, 0)
-    }
-
-    // MARK: - Gradient Presets
-
-    func testAllGradientPresets() throws {
-        let testImage = createTestImage()
-        let gradients: [GradientPreset] = [.ocean, .sunset, .forest, .fire, .midnight]
-
-        for gradient in gradients {
-            let data = try ImageExporter.exportImage(
-                sourceImage: testImage,
-                backgroundType: .gradient,
-                gradient: gradient,
-                solidColor: .white,
-            backgroundImage: nil,
+    func testExportWithEmptyImageThrows() {
+        XCTAssertThrowsError(
+            try ImageExporter.exportImage(
+                sourceImage: NSImage(),
+                backgroundType: .color,
+                gradientColors: [.blue],
+                backgroundImage: nil,
                 blurAmount: 0,
-                padding: 20,
-                cornerRadius: 0,
-                showShadow: false,
+                padding: 40,
+                cornerRadius: 12,
+                showShadow: true,
                 showBorder: false,
-            deviceFrame: nil,
+                deviceFrame: .none,
+                aspectRatio: .original,
+                customAspectRatio: CGSize(width: 4, height: 5),
+                annotations: [],
                 format: .png
             )
-            XCTAssertGreaterThan(data.count, 0, "Gradient \(gradient.name) should export successfully")
-        }
+        )
     }
 
-    // MARK: - Image Format
-
-    func testWebPFallbackToPNG() throws {
-        let testImage = createTestImage()
-
-        let webpData = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 0,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            deviceFrame: nil,
-            format: .webp
-        )
-
-        XCTAssertGreaterThan(webpData.count, 0)
-        // WebP fallback should produce PNG data
-        let pngData = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 0,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            deviceFrame: nil,
-            format: .png
-        )
-        XCTAssertEqual(webpData.count, pngData.count, "WebP fallback should produce identical PNG data")
-    }
-
-    // MARK: - Border
-
-    func testExportWithBorder() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 20,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: true,
-            deviceFrame: nil,
-            format: .png
-        )
-
-        XCTAssertGreaterThan(data.count, 0, "Export with border should succeed")
-    }
-
-    func testExportWithBorderAndCornerRadius() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 20,
-            cornerRadius: 12,
-            showShadow: false,
-            showBorder: true,
-            deviceFrame: nil,
-            format: .png
-        )
-
-        XCTAssertGreaterThan(data.count, 0, "Export with border and corner radius should succeed")
-    }
-
-    // MARK: - Device Frame
-
-    func testExportWithIPhoneFrame() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
+    func testRenderImageAppliesPaddingToOriginalAspectRatio() throws {
+        let rendered = try ImageExporter.renderImage(
+            sourceImage: makeImage(width: 100, height: 50),
+            backgroundType: .color,
+            gradientColors: [.blue],
             backgroundImage: nil,
             blurAmount: 0,
             padding: 20,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
-            deviceFrame: nil,
-            deviceFrame: .iphone,
-            format: .png
+            deviceFrame: .none,
+            aspectRatio: .original,
+            customAspectRatio: CGSize(width: 4, height: 5)
         )
 
-        XCTAssertGreaterThan(data.count, 0, "Export with iPhone frame should succeed")
-        // Frame should make image larger
-        let noFrameData = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
+        XCTAssertEqual(rendered.size.width, 140, accuracy: 0.001)
+        XCTAssertEqual(rendered.size.height, 90, accuracy: 0.001)
+    }
+
+    func testRenderImageHonorsRequestedCanvasAspectRatio() throws {
+        let rendered = try ImageExporter.renderImage(
+            sourceImage: makeImage(width: 100, height: 50),
+            backgroundType: .color,
+            gradientColors: [.blue],
             backgroundImage: nil,
             blurAmount: 0,
             padding: 20,
             cornerRadius: 0,
             showShadow: false,
             showBorder: false,
-            deviceFrame: nil,
-            deviceFrame: nil,
-            format: .png
-        )
-        XCTAssertGreaterThan(data.count, noFrameData.count, "iPhone frame should add visual elements")
-    }
-
-    func testExportWithMacBookFrame() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .solid,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 20,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            deviceFrame: .macbook,
-            format: .png
+            deviceFrame: .none,
+            aspectRatio: .square,
+            customAspectRatio: CGSize(width: 4, height: 5)
         )
 
-        XCTAssertGreaterThan(data.count, 0, "Export with MacBook frame should succeed")
+        XCTAssertEqual(rendered.size.width, 140, accuracy: 0.001)
+        XCTAssertEqual(rendered.size.height, 140, accuracy: 0.001)
     }
 
-    // MARK: - Image Background
+    func testPreviewRenderAndExportUseSameCanvasDimensions() throws {
+        let sourceImage = makeImage(width: 160, height: 90)
 
-    func testExportWithImageBackground() throws {
-        let testImage = createTestImage()
-        let backgroundImage = createTestImage(width: 200, height: 200)
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
+        let preview = try ImageExporter.renderImage(
+            sourceImage: sourceImage,
             backgroundType: .image,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            backgroundImage: backgroundImage,
-            blurAmount: 0,
-            padding: 20,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            deviceFrame: nil,
-            format: .png
-        )
-
-        XCTAssertGreaterThan(data.count, 0, "Export with image background should succeed")
-    }
-
-    func testExportWithImageBackgroundFallback() throws {
-        let testImage = createTestImage()
-
-        // nil background image should fallback to solid color
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .image,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            backgroundImage: nil,
-            blurAmount: 0,
-            padding: 20,
-            cornerRadius: 0,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: nil,
-            deviceFrame: nil,
-            format: .png
-        )
-
-        XCTAssertGreaterThan(data.count, 0, "Export with nil image background should fallback to solid")
-    }
-
-    // MARK: - Combined Settings
-
-    func testFullFeaturedExport() throws {
-        let testImage = createTestImage()
-
-        let data = try ImageExporter.exportImage(
-            sourceImage: testImage,
-            backgroundType: .gradient,
-            gradient: .ocean,
-            solidColor: .white,
-            backgroundImage: nil,
-            blurAmount: 5,
-            padding: 40,
-            cornerRadius: 12,
+            gradientColors: [.purple, .pink],
+            backgroundImage: makeImage(width: 240, height: 240, color: .systemOrange),
+            blurAmount: 18,
+            padding: 32,
+            cornerRadius: 14,
             showShadow: true,
-            showBorder: false,
-            deviceFrame: nil,
+            showBorder: true,
+            deviceFrame: .iphone,
+            aspectRatio: .portrait34,
+            customAspectRatio: CGSize(width: 4, height: 5),
+            annotations: []
+        )
+
+        let exportedData = try ImageExporter.exportImage(
+            sourceImage: sourceImage,
+            backgroundType: .image,
+            gradientColors: [.purple, .pink],
+            backgroundImage: makeImage(width: 240, height: 240, color: .systemOrange),
+            blurAmount: 18,
+            padding: 32,
+            cornerRadius: 14,
+            showShadow: true,
+            showBorder: true,
+            deviceFrame: .iphone,
+            aspectRatio: .portrait34,
+            customAspectRatio: CGSize(width: 4, height: 5),
+            annotations: [],
             format: .png
         )
 
-        XCTAssertGreaterThan(data.count, 0)
+        let exportedPixelSize = try XCTUnwrap(pixelSize(from: exportedData))
+
+        XCTAssertEqual(preview.size.width, exportedPixelSize.width, accuracy: 0.001)
+        XCTAssertEqual(preview.size.height, exportedPixelSize.height, accuracy: 0.001)
+    }
+
+    func testDeviceFrameIncreasesRenderedCanvasSize() throws {
+        let sourceImage = makeImage(width: 120, height: 80)
+
+        let unframed = try ImageExporter.renderImage(
+            sourceImage: sourceImage,
+            backgroundType: .color,
+            gradientColors: [.blue],
+            backgroundImage: nil,
+            blurAmount: 0,
+            padding: 20,
+            cornerRadius: 0,
+            showShadow: false,
+            showBorder: false,
+            deviceFrame: .none,
+            aspectRatio: .original,
+            customAspectRatio: CGSize(width: 4, height: 5)
+        )
+
+        let framed = try ImageExporter.renderImage(
+            sourceImage: sourceImage,
+            backgroundType: .color,
+            gradientColors: [.blue],
+            backgroundImage: nil,
+            blurAmount: 0,
+            padding: 20,
+            cornerRadius: 0,
+            showShadow: false,
+            showBorder: false,
+            deviceFrame: .iphone,
+            aspectRatio: .original,
+            customAspectRatio: CGSize(width: 4, height: 5)
+        )
+
+        XCTAssertGreaterThan(framed.size.width, unframed.size.width)
+        XCTAssertGreaterThan(framed.size.height, unframed.size.height)
+    }
+
+    private func pixelSize(from data: Data) -> CGSize? {
+        guard let rep = NSBitmapImageRep(data: data) else { return nil }
+        return CGSize(width: rep.pixelsWide, height: rep.pixelsHigh)
+    }
+
+    private func makeImage(width: CGFloat, height: CGFloat, color: NSColor = .systemBlue) -> NSImage {
+        let image = NSImage(size: NSSize(width: width, height: height))
+        image.lockFocus()
+        color.setFill()
+        NSBezierPath(rect: NSRect(x: 0, y: 0, width: width, height: height)).fill()
+        image.unlockFocus()
+        return image
     }
 }

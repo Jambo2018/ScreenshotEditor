@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.10.0] - 2026-04-12
+
+### Fixed
+- Unified preview and export rendering through a shared `ImageExporter` pipeline so canvas padding, background blur, aspect ratio, and device frame output match the exported image more closely.
+- Applied blur consistently to color and image backgrounds in export rendering instead of only in the SwiftUI preview path.
+
+### Changed
+- Simplified the main layout to a two-pane editor with only the preview canvas and right-side editing controls.
+- Reworked image import/capture/drop behavior to replace the current working image instead of maintaining a left-side import history list.
+- Reset annotations when switching to a newly imported or captured image to keep editing state aligned with the single-image workflow.
+
+### Added
+- Added empty-state actions in the preview area for “去截图” and “导入图片”.
+- Added regression coverage for shared render sizing and single-image state management.
+
 ## [0.1.9.0] - 2026-03-30
 
 ### Added

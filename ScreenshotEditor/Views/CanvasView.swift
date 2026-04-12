@@ -2,7 +2,7 @@
 //  CanvasView.swift
 //  ScreenshotEditor
 //
-//  Center canvas showing the screenshot with background
+//  Center preview canvas that mirrors export rendering
 //
 
 import SwiftUI
@@ -13,138 +13,96 @@ struct CanvasView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack {
+        Group {
             if let screenshot = appState.selectedScreenshot,
                let image = screenshot.image {
-
-                // Canvas area with background
-                ZStack {
-                    // Background
-                    backgroundView
-
-                    // Screenshot with effects
-                    Image(nsImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .cornerRadius(appState.cornerRadius)
-                        .shadow(color: appState.showShadow ? Color.black.opacity(0.3) : Color.clear,
-                                radius: 20, x: 0, y: 10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: appState.cornerRadius)
-                                .stroke(appState.showBorder ? Color.white.opacity(0.5) : Color.clear, lineWidth: 1)
-                        )
-                        .padding(appState.padding)
-                        .onDrag {
-                            // Support dragging the edited screenshot
-                            itemProviderForImage(image)
-                        }
-
-                    // Annotation layer
-                    AnnotationLayerView(sourceImage: image)
-                        .environmentObject(appState)
-                }
-                .aspectRatio(canvasAspectRatio(for: image), contentMode: .fit)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(NSColor.controlBackgroundColor))
-                .onDrop(of: [.image, .fileURL], isTargeted: nil) { providers in
-                    // Support dropping screenshots onto the canvas
-                    handleDrop(providers: providers)
-                    return true
-                }
-
+                previewCanvas(for: image)
             } else {
-                // Welcome / Empty state
                 WelcomeView()
             }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(NSColor.controlBackgroundColor))
+        .onDrop(of: [.image, .fileURL], isTargeted: nil) { providers in
+            handleDrop(providers: providers)
+            return true
         }
     }
 
     @ViewBuilder
-    private var backgroundView: some View {
-        switch appState.backgroundType {
-        case .color:
-            if appState.activeGradientColors.count == 1 {
-                appState.activeGradientColors[0]
-                    .blur(radius: appState.blurAmount)
-            } else {
-                LinearGradient(
-                    colors: appState.activeGradientColors,
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .blur(radius: appState.blurAmount)
-            }
+    private func previewCanvas(for sourceImage: NSImage) -> some View {
+        let previewImage = renderedPreviewImage(for: sourceImage) ?? sourceImage
+        let previewAspectRatio = max(previewImage.size.width, 1) / max(previewImage.size.height, 1)
 
-        case .blur:
-            Color.clear
-                .blur(radius: appState.blurAmount)
+        ZStack {
+            Image(nsImage: previewImage)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .onDrag {
+                    itemProviderForImage(previewImage)
+                }
 
-        case .image:
-            if let backgroundImage = appState.backgroundImage {
-                Image(nsImage: backgroundImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .blur(radius: appState.blurAmount)
-            } else {
-                Color.secondary.opacity(0.2)
-            }
+            AnnotationLayerView(sourceImage: previewImage)
+                .environmentObject(appState)
         }
+        .aspectRatio(previewAspectRatio, contentMode: .fit)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
     }
 
-    private func canvasAspectRatio(for image: NSImage) -> CGFloat {
-        if let ratio = appState.resolvedAspectRatioValue {
-            return ratio
-        }
-
-        let width = image.size.width + (appState.padding * 2)
-        let height = image.size.height + (appState.padding * 2)
-        guard height > 0 else { return 1 }
-        return width / height
+    private func renderedPreviewImage(for sourceImage: NSImage) -> NSImage? {
+        try? ImageExporter.renderImage(
+            sourceImage: sourceImage,
+            backgroundType: appState.backgroundType,
+            gradientColors: appState.activeGradientColors,
+            backgroundImage: appState.backgroundImage,
+            blurAmount: appState.blurAmount,
+            padding: appState.padding,
+            cornerRadius: appState.cornerRadius,
+            showShadow: appState.showShadow,
+            showBorder: appState.showBorder,
+            deviceFrame: appState.deviceFrame,
+            aspectRatio: appState.exportAspectRatio,
+            customAspectRatio: CGSize(
+                width: appState.customAspectRatioWidth,
+                height: appState.customAspectRatioHeight
+            )
+        )
     }
 
     private func itemProviderForImage(_ image: NSImage) -> NSItemProvider {
-        // Convert NSImage to PNG data for drag export
-        if let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) {
-            let bitmapRep = NSBitmapImageRep(cgImage: cgImage)
-            if let pngData = bitmapRep.representation(using: NSBitmapImageRep.FileType.png, properties: [:]) {
-                let itemProvider = NSItemProvider(item: pngData as NSSecureCoding, typeIdentifier: UTType.png.identifier)
-                return itemProvider
-            }
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return NSItemProvider()
         }
-        return NSItemProvider()
+
+        let bitmapRep = NSBitmapImageRep(cgImage: cgImage)
+        guard let pngData = bitmapRep.representation(using: .png, properties: [:]) else {
+            return NSItemProvider()
+        }
+
+        return NSItemProvider(item: pngData as NSSecureCoding, typeIdentifier: UTType.png.identifier)
     }
 
     private func handleDrop(providers: [NSItemProvider]) {
-        for provider in providers {
-            // Try to load image from drop
-            provider.loadItem(forTypeIdentifier: UTType.image.identifier, options: nil) { item, error in
-                if let error = error {
-                    DispatchQueue.main.async {
-                        appState.errorMessage = "Failed to load image: \(error.localizedDescription)"
-                    }
-                    return
-                }
+        guard let provider = providers.first else { return }
 
-                if let imageData = item as? Data,
-                   let nsImage = NSImage(data: imageData) {
-                    DispatchQueue.main.async {
-                        // Create new screenshot from dropped image
-                        let screenshot = Screenshot(
-                            id: UUID(),
-                            name: "Dropped Image \(Date().timeIntervalSince1970)",
-                            sourceURL: nil,
-                            createdAt: Date(),
-                            image: nsImage
-                        )
-                        appState.screenshots.append(screenshot)
-                        appState.selectedScreenshotId = screenshot.id
-                    }
-                } else if let url = item as? URL {
-                    // Handle file URL drops
-                    appState.loadImage(from: url)
+        provider.loadItem(forTypeIdentifier: UTType.image.identifier, options: nil) { item, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    appState.errorMessage = "Failed to load image: \(error.localizedDescription)"
                 }
+                return
             }
-            break // Only handle first provider
+
+            if let imageData = item as? Data,
+               let nsImage = NSImage(data: imageData) {
+                appState.replaceCurrentImage(
+                    nsImage,
+                    name: "Dropped Image \(Date().timeIntervalSince1970)"
+                )
+            } else if let url = item as? URL {
+                appState.loadImage(from: url)
+            }
         }
     }
 }
@@ -152,109 +110,40 @@ struct CanvasView: View {
 // MARK: - Welcome View
 
 struct WelcomeView: View {
+    @EnvironmentObject var appState: AppState
+
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "photo.badge.plus")
                 .font(.system(size: 60))
                 .foregroundColor(.secondary)
 
-            Text("Welcome to Screenshot Editor")
+            Text("开始编辑截图")
                 .font(.title2)
                 .fontWeight(.semibold)
 
-            Text("Drag and drop a screenshot to get started")
+            Text("先去截图或导入图片，预览区显示的效果将与最终导出保持一致。")
                 .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
 
             HStack(spacing: 12) {
-                Label("Import", systemImage: "keyboard.command")
-                Label("Export", systemImage: "keyboard.command")
-                Label("Save", systemImage: "keyboard.command")
+                Button(action: { appState.startScreenCapture() }) {
+                    Label("去截图", systemImage: "camera.viewfinder")
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button(action: { appState.importScreenshot() }) {
+                    Label("导入图片", systemImage: "square.and.arrow.down")
+                }
+                .buttonStyle(.bordered)
             }
-            .font(.caption)
-            .foregroundColor(.gray)
+
+            Text("也支持直接拖拽图片到预览区")
+                .font(.caption)
+                .foregroundColor(.gray)
         }
-    }
-}
-
-// MARK: - Device Frame Overlay
-
-extension CanvasView {
-    @ViewBuilder
-    private func deviceFrameOverlay(for image: NSImage, frame: DeviceFrame) -> some View {
-        switch frame {
-        case .none:
-            EmptyView()
-
-        case .iphone:
-            iPhoneFrameOverlay(for: image)
-
-        case .macbook:
-            MacBookFrameOverlay(for: image)
-        }
-    }
-
-    private func iPhoneFrameOverlay(for image: NSImage) -> some View {
-        ZStack {
-            // Device body
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color.black)
-
-            // Screen area with image
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.clear)
-                .overlay(
-                    Image(nsImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .cornerRadius(16)
-                        .clipped()
-                )
-                .padding(.horizontal, 20)
-                .padding(.vertical, 30)
-
-            // Top notch
-            Capsule()
-                .fill(Color.black)
-                .frame(width: 100, height: 20)
-                .offset(y: -140)
-
-            // Bottom home indicator
-            Capsule()
-                .fill(Color.black.opacity(0.8))
-                .frame(width: 100, height: 4)
-                .offset(y: 140)
-        }
-        .aspectRatio(9 / 19.5, contentMode: .fit)
-    }
-
-    private func MacBookFrameOverlay(for image: NSImage) -> some View {
-        ZStack {
-            // Device body (dark gray)
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.gray.opacity(0.8))
-
-            // Screen area
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.clear)
-                .overlay(
-                    Image(nsImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .cornerRadius(8)
-                        .clipped()
-                )
-                .padding(.horizontal, 15)
-                .padding(.top, 20)
-                .padding(.bottom, 40) // MacBook chin
-
-            // Bottom chin detail line
-            Rectangle()
-                .fill(Color.gray.opacity(0.5))
-                .frame(height: 1)
-                .padding(.horizontal, 30)
-                .offset(y: 100)
-        }
-        .aspectRatio(16 / 10, contentMode: .fit)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(32)
     }
 }
 

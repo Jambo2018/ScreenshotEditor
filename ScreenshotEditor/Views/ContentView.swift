@@ -9,35 +9,33 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var showErrorSheet: Bool = false
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            // Left sidebar - Screenshot list
-            ScreenshotListView()
-                .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 280)
-        } detail: {
-            HSplitView {
-                // Center - Canvas area
-                CanvasView()
+        HSplitView {
+            CanvasView()
 
-                // Right panel - Controls + Annotation tools
-                VStack(spacing: 0) {
-                    ControlPanelView()
-                        .frame(minWidth: 250, maxWidth: 320)
+            VStack(spacing: 0) {
+                ControlPanelView()
+                    .frame(minWidth: 260, idealWidth: 300, maxWidth: 340)
 
-                    Divider()
+                Divider()
 
-                    AnnotationPanelView()
-                        .frame(minWidth: 250, maxWidth: 320)
-                }
+                AnnotationPanelView()
+                    .frame(minWidth: 260, idealWidth: 300, maxWidth: 340)
             }
         }
         .onChange(of: appState.errorMessage) { _, newValue in
             showErrorSheet = newValue != nil
         }
         .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button(action: { appState.startScreenCapture() }) {
+                    Label("Capture", systemImage: "camera.viewfinder")
+                }
+                .help("Capture screen (⌘⇧K)")
+            }
+
             ToolbarItem(placement: .automatic) {
                 Button(action: { appState.importScreenshot() }) {
                     Label("Import", systemImage: "square.and.arrow.down")

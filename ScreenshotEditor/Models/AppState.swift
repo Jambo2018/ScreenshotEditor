@@ -253,8 +253,7 @@ class AppState: ObservableObject {
 
             // Update UI on main thread
             DispatchQueue.main.async {
-                self.screenshots.insert(screenshot, at: 0)
-                self.selectedScreenshotId = screenshot.id
+                self.setCurrentScreenshot(screenshot)
             }
         }
     }
@@ -280,19 +279,22 @@ class AppState: ObservableObject {
             return
         }
 
+        replaceCurrentImage(image, name: url.lastPathComponent, sourceURL: url)
+    }
+
+    func replaceCurrentImage(_ image: NSImage, name: String, sourceURL: URL? = nil) {
         let normalized = normalizedImageForEditing(image)
 
         let screenshot = Screenshot(
             id: UUID(),
-            name: url.lastPathComponent,
-            sourceURL: url,
+            name: name,
+            sourceURL: sourceURL,
             createdAt: Date(),
             image: normalized
         )
 
         DispatchQueue.main.async {
-            self.screenshots.insert(screenshot, at: 0)
-            self.selectedScreenshotId = screenshot.id
+            self.setCurrentScreenshot(screenshot)
         }
     }
 
@@ -301,6 +303,14 @@ class AppState: ObservableObject {
             return image
         }
         return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+    }
+
+    func setCurrentScreenshot(_ screenshot: Screenshot) {
+        screenshots = [screenshot]
+        selectedScreenshotId = screenshot.id
+        selectedScreenshotIds = [screenshot.id]
+        annotations.removeAll()
+        selectedAnnotationId = nil
     }
 
     func exportCurrent(format: ImageFormat = .png, copyToClipboard: Bool? = nil) {
@@ -498,8 +508,13 @@ class AppState: ObservableObject {
 
     func deleteScreenshot(_ screenshot: Screenshot) {
         screenshots.removeAll { $0.id == screenshot.id }
+        selectedScreenshotIds.remove(screenshot.id)
         if selectedScreenshotId == screenshot.id {
             selectedScreenshotId = screenshots.first?.id
+        }
+        if selectedScreenshotId == nil {
+            annotations.removeAll()
+            selectedAnnotationId = nil
         }
     }
 
@@ -524,7 +539,7 @@ class AppState: ObservableObject {
         // Load metadata if exists
         guard FileManager.default.fileExists(atPath: metadataFile.path),
               let data = try? Data(contentsOf: metadataFile),
-              let metadata = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+              (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) != nil else {
             return
         }
         
