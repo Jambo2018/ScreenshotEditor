@@ -55,8 +55,8 @@ struct BackgroundSection: View {
             .pickerStyle(.segmented)
             .labelsHidden()
 
-            // Gradient presets
-            if appState.backgroundType == .gradient {
+            // Unified color background (single color or gradient)
+            if appState.backgroundType == .color {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Presets")
                         .font(.caption)
@@ -80,7 +80,7 @@ struct BackgroundSection: View {
                         }
                     }
 
-                    Text("Custom Gradient")
+                    Text("Custom")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.top, 4)
@@ -93,47 +93,22 @@ struct BackgroundSection: View {
                         }) {
                             gradientCard(
                                 title: "Custom",
-                                colors: [appState.customGradientStartColor, appState.customGradientEndColor],
+                                colors: appState.activeGradientColors,
                                 isSelected: appState.useCustomGradient
                             )
                         }
                         .buttonStyle(.plain)
 
                         HStack(spacing: 12) {
-                            ColorPicker("Start", selection: customGradientStartBinding)
-                            ColorPicker("End", selection: customGradientEndBinding)
+                            ColorPicker("Color A", selection: customGradientStartBinding)
+                            if appState.useSecondCustomGradientColor {
+                                ColorPicker("Color B", selection: customGradientEndBinding)
+                            }
                         }
                         .font(.caption)
-                    }
-                }
-            }
 
-            // Color picker (for solid color mode)
-            if appState.backgroundType == .solid {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Solid Color")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    LazyVGrid(columns: [GridItem(.fixed(28)), GridItem(.fixed(28)), GridItem(.fixed(28)), GridItem(.fixed(28)), GridItem(.fixed(28))], spacing: 8) {
-                        ForEach([Color.white, Color.black, Color.gray, Color.blue, Color.orange], id: \.self) { color in
-                            Circle()
-                                .fill(color)
-                                .frame(width: 28, height: 28)
-                                .overlay(
-                                    Circle()
-                                        .stroke(appState.selectedColor == color ? Color.accentColor : Color.clear, lineWidth: 2)
-                                )
-                                .onTapGesture {
-                                    withAnimation {
-                                        appState.selectedColor = color
-                                    }
-                                }
-                        }
-
-                        ColorPicker("", selection: $appState.selectedColor)
-                            .labelsHidden()
-                            .frame(width: 28, height: 28)
+                        Toggle("Second Color (Gradient)", isOn: secondColorBinding)
+                            .font(.caption)
                     }
                 }
             }
@@ -215,20 +190,38 @@ struct BackgroundSection: View {
             set: { newValue in
                 appState.customGradientEndColor = newValue
                 appState.useCustomGradient = true
+                appState.useSecondCustomGradientColor = true
+            }
+        )
+    }
+
+    private var secondColorBinding: Binding<Bool> {
+        Binding(
+            get: { appState.useSecondCustomGradientColor },
+            set: { newValue in
+                appState.useSecondCustomGradientColor = newValue
+                appState.useCustomGradient = true
             }
         )
     }
 
     @ViewBuilder
     private func gradientCard(title: String, colors: [Color], isSelected: Bool) -> some View {
+        let previewColors = colors.isEmpty ? [Color.white] : colors
         VStack(alignment: .leading, spacing: 6) {
-            LinearGradient(
-                colors: colors,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .frame(height: 44)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            if previewColors.count == 1 {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(previewColors[0])
+                    .frame(height: 44)
+            } else {
+                LinearGradient(
+                    colors: previewColors,
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .frame(height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
 
             Text(title)
                 .font(.caption2)

@@ -21,7 +21,6 @@ class ImageExporter {
         sourceImage: NSImage,
         backgroundType: BackgroundType,
         gradientColors: [Color],
-        solidColor: Color,
         backgroundImage: NSImage?,
         blurAmount: Double,
         padding: Double,
@@ -62,7 +61,6 @@ class ImageExporter {
             in: context,
             type: backgroundType,
             gradientColors: gradientColors,
-            solidColor: solidColor,
             backgroundImage: backgroundImage,
             blurAmount: blurAmount,
             size: layout.canvasSize
@@ -183,7 +181,6 @@ class ImageExporter {
         in context: CGContext,
         type: BackgroundType,
         gradientColors: [Color],
-        solidColor: Color,
         backgroundImage: NSImage?,
         blurAmount: Double,
         size: CGSize
@@ -191,10 +188,8 @@ class ImageExporter {
         let background: CGImage?
 
         switch type {
-        case .gradient:
+        case .color:
             background = createGradientBackground(colors: gradientColors, size: size)
-        case .solid:
-            background = createSolidBackground(color: solidColor, size: size)
         case .blur:
             background = createBlurBackground(blurAmount: blurAmount, size: size)
         case .image:
@@ -209,8 +204,12 @@ class ImageExporter {
     private static func createGradientBackground(colors: [Color], size: CGSize) -> CGImage? {
         let cgColors = colors.map { NSColor($0).cgColor }
 
-        guard cgColors.count >= 2 else {
+        guard !cgColors.isEmpty else {
             return createSolidBackground(color: .white, size: size)
+        }
+
+        if cgColors.count == 1 {
+            return createSolidBackground(cgColor: cgColors[0], size: size)
         }
 
         let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -238,6 +237,10 @@ class ImageExporter {
     }
 
     private static func createSolidBackground(color: Color, size: CGSize) -> CGImage? {
+        createSolidBackground(cgColor: NSColor(color).cgColor, size: size)
+    }
+
+    private static func createSolidBackground(cgColor: CGColor, size: CGSize) -> CGImage? {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         guard let context = CGContext(
             data: nil,
@@ -251,7 +254,7 @@ class ImageExporter {
             return nil
         }
 
-        context.setFillColor(NSColor(color).cgColor)
+        context.setFillColor(cgColor)
         context.fill(CGRect(origin: .zero, size: size))
         return context.makeImage()
     }

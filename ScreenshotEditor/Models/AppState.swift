@@ -26,12 +26,12 @@ class AppState: ObservableObject {
     private var captureOverlayWindow: CaptureOverlayWindow?
 
     // Background settings
-    @Published var backgroundType: BackgroundType = .gradient
-    @Published var selectedGradient: GradientPreset = .ocean
+    @Published var backgroundType: BackgroundType = .color
+    @Published var selectedGradient: GradientPreset = .cobalt
     @Published var useCustomGradient: Bool = false
     @Published var customGradientStartColor: Color = .blue
     @Published var customGradientEndColor: Color = .mint
-    @Published var selectedColor: Color = .white
+    @Published var useSecondCustomGradientColor: Bool = false
     @Published var backgroundImage: NSImage?
     @Published var blurAmount: Double = 0
     @Published var padding: Double = 40
@@ -73,7 +73,10 @@ class AppState: ObservableObject {
     }
 
     var activeGradientColors: [Color] {
-        useCustomGradient ? [customGradientStartColor, customGradientEndColor] : selectedGradient.colors
+        if useCustomGradient {
+            return useSecondCustomGradientColor ? [customGradientStartColor, customGradientEndColor] : [customGradientStartColor]
+        }
+        return selectedGradient.colors
     }
 
     var resolvedAspectRatioValue: CGFloat? {
@@ -351,7 +354,6 @@ class AppState: ObservableObject {
 
         let currentBackgroundType = backgroundType
         let currentGradientColors = activeGradientColors
-        let currentSolidColor = selectedColor
         let currentBlurAmount = blurAmount
         let currentPadding = padding
         let currentCornerRadius = cornerRadius
@@ -393,7 +395,6 @@ class AppState: ObservableObject {
                                         sourceImage: image,
                                         backgroundType: currentBackgroundType,
                                         gradientColors: currentGradientColors,
-                                        solidColor: currentSolidColor,
                                         backgroundImage: self.backgroundImage,
                                         blurAmount: currentBlurAmount,
                                         padding: currentPadding,
@@ -429,7 +430,6 @@ class AppState: ObservableObject {
                         sourceImage: images.first!.0,
                         backgroundType: currentBackgroundType,
                         gradientColors: currentGradientColors,
-                        solidColor: currentSolidColor,
                         backgroundImage: self.backgroundImage,
                         blurAmount: currentBlurAmount,
                         padding: currentPadding,
@@ -556,6 +556,7 @@ class AppState: ObservableObject {
                 "backgroundType": backgroundType.rawValue,
                 "selectedGradient": selectedGradient.name,
                 "useCustomGradient": useCustomGradient,
+                "useSecondCustomGradientColor": useSecondCustomGradientColor,
                 "blurAmount": blurAmount,
                 "padding": padding,
                 "cornerRadius": cornerRadius,
@@ -693,8 +694,7 @@ extension ImageFormat {
 // MARK: - Supporting Types
 
 enum BackgroundType: String, CaseIterable {
-    case gradient = "Gradient"
-    case solid = "Solid Color"
+    case color = "Color"
     case blur = "Blur"
     case image = "Image"
 }
@@ -704,16 +704,14 @@ struct GradientPreset: Identifiable, Hashable {
     let name: String
     let colors: [Color]
 
-    static let ocean = GradientPreset(name: "Ocean", colors: [.blue, .purple])
-    static let sunset = GradientPreset(name: "Sunset", colors: [.orange, .pink])
-    static let forest = GradientPreset(name: "Forest", colors: [.green, .teal])
-    static let fire = GradientPreset(name: "Fire", colors: [.red, .yellow])
-    static let midnight = GradientPreset(name: "Midnight", colors: [.indigo, .black])
-    static let stone = GradientPreset(name: "Stone", colors: [.gray, .black])
-    static let mint = GradientPreset(name: "Mint", colors: [.green, .mint])
+    static let cobalt = GradientPreset(name: "Cobalt", colors: [.blue])
+    static let graphite = GradientPreset(name: "Graphite", colors: [.gray])
+    static let coral = GradientPreset(name: "Coral", colors: [.orange, .pink])
+    static let tide = GradientPreset(name: "Tide", colors: [.cyan, .teal])
+    static let ember = GradientPreset(name: "Ember", colors: [.red, .orange])
 
     static let presets = [
-        ocean, sunset, forest, fire, midnight, stone, mint
+        cobalt, graphite, coral, tide, ember
     ]
 }
 

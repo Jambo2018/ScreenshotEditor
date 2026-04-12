@@ -66,16 +66,18 @@ struct CanvasView: View {
     @ViewBuilder
     private var backgroundView: some View {
         switch appState.backgroundType {
-        case .gradient:
-            LinearGradient(
-                colors: appState.activeGradientColors,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .blur(radius: appState.blurAmount)
-
-        case .solid:
-            appState.selectedColor
+        case .color:
+            if appState.activeGradientColors.count == 1 {
+                appState.activeGradientColors[0]
+                    .blur(radius: appState.blurAmount)
+            } else {
+                LinearGradient(
+                    colors: appState.activeGradientColors,
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .blur(radius: appState.blurAmount)
+            }
 
         case .blur:
             Color.clear
