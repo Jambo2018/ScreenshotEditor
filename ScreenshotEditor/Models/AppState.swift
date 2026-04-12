@@ -280,18 +280,27 @@ class AppState: ObservableObject {
             return
         }
 
+        let normalized = normalizedImageForEditing(image)
+
         let screenshot = Screenshot(
             id: UUID(),
             name: url.lastPathComponent,
             sourceURL: url,
             createdAt: Date(),
-            image: image
+            image: normalized
         )
 
         DispatchQueue.main.async {
             self.screenshots.insert(screenshot, at: 0)
             self.selectedScreenshotId = screenshot.id
         }
+    }
+
+    private func normalizedImageForEditing(_ image: NSImage) -> NSImage {
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return image
+        }
+        return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
     }
 
     func exportCurrent(format: ImageFormat = .png, copyToClipboard: Bool? = nil) {

@@ -67,7 +67,7 @@ class ImageExporter {
         )
 
         let roundedSource = cornerRadius > 0
-            ? applyCornerRadius(cgImage, radius: cornerRadius, size: sourceImage.size)
+            ? applyCornerRadius(cgImage, radius: cornerRadius)
             : cgImage
 
         if showShadow {
@@ -302,7 +302,7 @@ class ImageExporter {
 
     // MARK: - Source Rendering
 
-    private static func applyCornerRadius(_ image: CGImage, radius: Double, size: CGSize) -> CGImage {
+    private static func applyCornerRadius(_ image: CGImage, radius: Double) -> CGImage {
         guard radius > 0 else { return image }
 
         let context = CGContext(
@@ -316,7 +316,7 @@ class ImageExporter {
         )!
 
         let path = CGPath(
-            roundedRect: CGRect(origin: .zero, size: size),
+            roundedRect: CGRect(origin: .zero, size: CGSize(width: image.width, height: image.height)),
             cornerWidth: radius,
             cornerHeight: radius,
             transform: nil
@@ -324,7 +324,7 @@ class ImageExporter {
 
         context.addPath(path)
         context.clip()
-        context.draw(image, in: CGRect(origin: .zero, size: size))
+        context.draw(image, in: CGRect(origin: .zero, size: CGSize(width: image.width, height: image.height)))
         return context.makeImage()!
     }
 
