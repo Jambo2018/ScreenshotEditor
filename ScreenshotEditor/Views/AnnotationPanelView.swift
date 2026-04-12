@@ -9,35 +9,46 @@ import SwiftUI
 
 struct AnnotationPanelView: View {
     @EnvironmentObject var appState: AppState
+    @State private var isToolPanelExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
-            Text("标注工具")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-
-            Divider()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Tool picker
-                    ToolPickerSection()
-
-                    Divider()
-
-                    // Tool-specific settings
-                    ToolSettingsSection()
-
-                    Divider()
-
-                    // Annotations list
-                    AnnotationsListSection()
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isToolPanelExpanded.toggle()
                 }
-                .padding(12)
+            }) {
+                HStack {
+                    Label("标注工具", systemImage: "wand.and.rays")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Spacer()
+                    Image(systemName: isToolPanelExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+            }
+            .buttonStyle(.plain)
+
+            if isToolPanelExpanded {
+                Divider()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        ToolPickerSection()
+
+                        Divider()
+
+                        ToolSettingsSection()
+
+                        Divider()
+
+                        AnnotationsListSection()
+                    }
+                    .padding(12)
+                }
             }
         }
         .frame(width: 220)
@@ -48,6 +59,7 @@ struct AnnotationPanelView: View {
 
 struct ToolPickerSection: View {
     @EnvironmentObject var appState: AppState
+    private let visibleTools: [AnnotationTool] = [.select, .rectangle, .text, .arrow, .mosaic, .freehand]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -56,7 +68,7 @@ struct ToolPickerSection: View {
                 .foregroundColor(.secondary)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                ForEach(AnnotationTool.allCases, id: \.self) { tool in
+                ForEach(visibleTools, id: \.self) { tool in
                     Button(action: {
                         withAnimation {
                             appState.selectedAnnotationTool = tool
@@ -111,14 +123,8 @@ struct ToolSettingsSection: View {
             case .arrow, .rectangle:
                 ShapeSettingsView()
 
-            case .highlight, .blur, .mosaic, .freehand:
+            case .mosaic, .freehand:
                 BrushSettingsView()
-
-            case .number:
-                NumberSettingsView()
-
-            case .colorPicker:
-                ColorPickerInfoView()
             }
         }
     }
@@ -227,6 +233,31 @@ struct BrushSettingsView: View {
 
     var body: some View {
         VStack(spacing: 10) {
+            if appState.selectedAnnotationTool == .freehand {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("颜色")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+
+                    HStack(spacing: 6) {
+                        ForEach([Color.red, Color.green, Color.blue, Color.yellow, Color.white, Color.black], id: \.self) { color in
+                            Circle()
+                                .fill(color)
+                                .frame(width: 24, height: 24)
+                                .overlay(
+                                    Circle()
+                                        .stroke(appState.currentShapeColor == color ? Color.accentColor : Color.clear, lineWidth: 2)
+                                )
+                                .onTapGesture {
+                                    withAnimation {
+                                        appState.currentShapeColor = color
+                                    }
+                                }
+                        }
+                    }
+                }
+            }
+
             // Brush size slider
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -339,76 +370,6 @@ struct AnnotationRowView: View {
             RoundedRectangle(cornerRadius: 4)
                 .fill(appState.selectedAnnotationId == annotation.id ? Color.accentColor.opacity(0.2) : Color.clear)
         )
-    }
-}
-
-// MARK: - Color Picker Info View
-
-struct ColorPickerInfoView: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("取色器")
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            Text("点击图片任意位置吸取颜色")
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            Text("吸取的颜色会自动应用到当前选中的工具")
-                .font(.caption2)
-                .foregroundColor(.gray)
-                .padding(.top, 4)
-        }
-        .padding(.vertical, 8)
-    }
-}
-
-// MARK: - Number Settings View
-
-struct NumberSettingsView: View {
-    @EnvironmentObject var appState: AppState
-
-    var body: some View {
-        VStack(spacing: 10) {
-            // Color picker
-            VStack(alignment: .leading, spacing: 6) {
-                Text("编号颜色")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-
-                HStack(spacing: 6) {
-                    ForEach([Color.red, Color.green, Color.blue, Color.yellow, Color.white, Color.black], id: \.self) { color in
-                        Circle()
-                            .fill(color)
-                            .frame(width: 24, height: 24)
-                            .overlay(
-                                Circle()
-                                    .stroke(appState.currentShapeColor == color ? Color.accentColor : Color.clear, lineWidth: 2)
-                            )
-                            .onTapGesture {
-                                withAnimation {
-                                    appState.currentShapeColor = color
-                                }
-                            }
-                    }
-                }
-            }
-
-            // Font size slider
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("大小")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text("\(Int(appState.currentTextSize))pt")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                Slider(value: $appState.currentTextSize, in: 12...72, step: 2)
-            }
-        }
     }
 }
 

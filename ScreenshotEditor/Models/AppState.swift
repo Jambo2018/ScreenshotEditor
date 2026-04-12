@@ -142,13 +142,6 @@ class AppState: ObservableObject {
             self?.closeAllPinWindows()
         }
 
-        // I: Activate color picker
-        hotKeyMonitor?.register(
-            key: .i,
-            modifiers: []
-        ) { [weak self] in
-            self?.activateColorPicker()
-        }
     }
 
     func startScreenCapture() {
@@ -621,15 +614,7 @@ class AppState: ObservableObject {
         PinWindowManager.shared.closeAllPins()
     }
 
-    // MARK: - Color Picker
-
-    func activateColorPicker() {
-        isColorPickingMode = true
-        selectedAnnotationTool = .colorPicker
-        #if DEBUG
-        print("[ColorPicker] Activated")
-        #endif
-    }
+    // MARK: - Color Helper
 
     func pickColor(at screenPoint: CGPoint) -> Color? {
         guard let image = ScreenCapturer.captureScreen(at: screenPoint, size: CGSize(width: 1, height: 1)),
@@ -651,10 +636,7 @@ class AppState: ObservableObject {
         switch selectedAnnotationTool {
         case .text:
             currentTextColor = color
-        case .rectangle, .arrow:
-            currentShapeColor = color
-        case .highlight, .blur, .mosaic:
-            // Brush tools use currentShapeColor for consistency
+        case .rectangle, .arrow, .mosaic, .freehand:
             currentShapeColor = color
         default:
             break
@@ -744,6 +726,7 @@ struct Annotation: Identifiable, Codable {
     var startPoint: CGPoint?
     var endPoint: CGPoint?
     var size: CGSize?
+    var points: [CGPoint]?
 }
 
 enum AnnotationType: String, Codable {
@@ -763,12 +746,8 @@ enum AnnotationTool: String, CaseIterable {
     case text = "text"
     case arrow = "arrow"
     case rectangle = "rectangle"
-    case highlight = "highlight"
-    case blur = "blur"
     case mosaic = "mosaic"
-    case number = "number"
     case freehand = "freehand"
-    case colorPicker = "colorPicker"
 
     var icon: String {
         switch self {
@@ -776,12 +755,8 @@ enum AnnotationTool: String, CaseIterable {
         case .text: return "textformat"
         case .arrow: return "arrow.right"
         case .rectangle: return "rectangle"
-        case .highlight: return "marker"
-        case .blur: return "blur"
         case .mosaic: return "pixel"
-        case .number: return "number"
         case .freehand: return "pencil"
-        case .colorPicker: return "eyedropper"
         }
     }
 
@@ -791,12 +766,8 @@ enum AnnotationTool: String, CaseIterable {
         case .text: return "文字"
         case .arrow: return "箭头"
         case .rectangle: return "矩形"
-        case .highlight: return "高亮"
-        case .blur: return "模糊"
         case .mosaic: return "马赛克"
-        case .number: return "编号"
         case .freehand: return "自由绘"
-        case .colorPicker: return "取色器"
         }
     }
 }

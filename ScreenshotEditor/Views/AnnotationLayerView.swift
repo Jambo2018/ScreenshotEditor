@@ -82,10 +82,8 @@ struct AnnotationLayerView: View {
             addTextAnnotation(at: location, canvasSize: canvasSize)
         case AnnotationTool.arrow, AnnotationTool.rectangle:
             startShapeDrawing(at: location, canvasSize: canvasSize)
-        case AnnotationTool.highlight, AnnotationTool.blur, AnnotationTool.mosaic:
+        case AnnotationTool.mosaic, AnnotationTool.freehand:
             startBrushDrawing(at: location, canvasSize: canvasSize)
-        case AnnotationTool.colorPicker:
-            pickColor(at: location, in: canvasSize)
         default:
             break
         }
@@ -95,7 +93,7 @@ struct AnnotationLayerView: View {
         switch appState.selectedAnnotationTool {
         case AnnotationTool.arrow, AnnotationTool.rectangle:
             updateShapeDrawing(at: location, canvasSize: canvasSize)
-        case AnnotationTool.highlight, AnnotationTool.blur, AnnotationTool.mosaic:
+        case AnnotationTool.mosaic, AnnotationTool.freehand:
             updateBrushDrawing(at: location, canvasSize: canvasSize)
         default:
             break
@@ -106,12 +104,8 @@ struct AnnotationLayerView: View {
         switch appState.selectedAnnotationTool {
         case AnnotationTool.arrow, AnnotationTool.rectangle:
             completeShapeDrawing(at: location, canvasSize: canvasSize)
-        case AnnotationTool.highlight, AnnotationTool.blur, AnnotationTool.mosaic:
+        case AnnotationTool.mosaic, AnnotationTool.freehand:
             completeBrushDrawing(at: location, canvasSize: canvasSize)
-        case AnnotationTool.colorPicker:
-            // Color picker completes on tap
-            appState.selectedAnnotationTool = .select
-            appState.isColorPickingMode = false
         default:
             break
         }
@@ -133,12 +127,12 @@ struct AnnotationLayerView: View {
             width: 0,
             startPoint: nil as CGPoint?,
             endPoint: nil as CGPoint?,
-            size: nil as CGSize?
+            size: nil as CGSize?,
+            points: nil
         )
 
         appState.annotations.append(annotation)
         appState.selectedAnnotationId = annotation.id
-        appState.selectedAnnotationTool = AnnotationTool.select
     }
 
     // MARK: - Shape Drawing (Arrow, Rectangle)
@@ -159,7 +153,8 @@ struct AnnotationLayerView: View {
             width: appState.currentStrokeWidth,
             startPoint: CGPoint(x: normalizedX, y: normalizedY),
             endPoint: CGPoint(x: normalizedX, y: normalizedY),
-            size: nil as CGSize?
+            size: nil as CGSize?,
+            points: nil
         )
 
         appState.annotations.append(annotation)
@@ -178,7 +173,6 @@ struct AnnotationLayerView: View {
 
     private func completeShapeDrawing(at location: CGPoint, canvasSize: CGSize) {
         updateShapeDrawing(at: location, canvasSize: canvasSize)
-        appState.selectedAnnotationTool = AnnotationTool.select
     }
 
     // MARK: - Brush Drawing (Highlight, Blur)
@@ -187,18 +181,9 @@ struct AnnotationLayerView: View {
         let normalizedX = location.x / canvasSize.width
         let normalizedY = location.y / canvasSize.height
 
-        let type: AnnotationType
-        let color: Color
-        if appState.selectedAnnotationTool == AnnotationTool.highlight {
-            type = AnnotationType.highlight
-            color = Color.yellow
-        } else if appState.selectedAnnotationTool == AnnotationTool.blur {
-            type = AnnotationType.blur
-            color = Color.black
-        } else {
-            type = AnnotationType.mosaic
-            color = Color.clear
-        }
+        let isFreehand = appState.selectedAnnotationTool == .freehand
+        let type: AnnotationType = isFreehand ? .freehand : .mosaic
+        let color: Color = isFreehand ? appState.currentShapeColor : .black
 
         let annotation = Annotation(
             id: UUID(),
@@ -209,8 +194,9 @@ struct AnnotationLayerView: View {
             color: CodableColor(color: color),
             width: appState.currentBrushOpacity,
             startPoint: CGPoint(x: normalizedX, y: normalizedY),
-            endPoint: nil as CGPoint?,
-            size: nil as CGSize?
+            endPoint: CGPoint(x: normalizedX, y: normalizedY),
+            size: nil as CGSize?,
+            points: [CGPoint(x: normalizedX, y: normalizedY)]
         )
 
         appState.annotations.append(annotation)
@@ -224,50 +210,20 @@ struct AnnotationLayerView: View {
         let normalizedX = location.x / canvasSize.width
         let normalizedY = location.y / canvasSize.height
 
-        if appState.annotations[index].endPoint == nil {
-            appState.annotations[index].endPoint = CGPoint(x: normalizedX, y: normalizedY)
-        } else {
-            appState.annotations[index].endPoint = CGPoint(x: normalizedX, y: normalizedY)
+        let nextPoint = CGPoint(x: normalizedX, y: normalizedY)
+        appState.annotations[index].endPoint = nextPoint
+
+        if appState.annotations[index].type == .freehand {
+            if appState.annotations[index].points == nil {
+                appState.annotations[index].points = [nextPoint]
+            } else {
+                appState.annotations[index].points?.append(nextPoint)
+            }
         }
     }
 
     private func completeBrushDrawing(at location: CGPoint, canvasSize: CGSize) {
         updateBrushDrawing(at: location, canvasSize: canvasSize)
-        appState.selectedAnnotationTool = AnnotationTool.select
-    }
-
-    // MARK: - Color Picker
-
-    private func pickColor(at location: CGPoint, in canvasSize: CGSize) {
-        // Convert canvas location to image coordinates
-        let imageX = location.x * (sourceImage.size.width / canvasSize.width)
-        let imageY = location.y * (sourceImage.size.height / canvasSize.height)
-
-        guard let cgImage = sourceImage.cgImage(forProposedRect: nil, context: nil, hints: nil),
-              let dataProvider = cgImage.dataProvider,
-              let pixelData = dataProvider.data else {
-            return
-        }
-
-        let data = CFDataGetBytePtr(pixelData)!
-        let bytesPerRow = cgImage.bytesPerRow
-        let bytesPerPixel = cgImage.bitsPerPixel / 8
-
-        // Calculate pixel offset
-        let pixelOffset = Int(imageY) * bytesPerRow + Int(imageX) * bytesPerPixel
-
-        let red = CGFloat(data[pixelOffset]) / 255.0
-        let green = CGFloat(data[pixelOffset + 1]) / 255.0
-        let blue = CGFloat(data[pixelOffset + 2]) / 255.0
-
-        let pickedColor = Color(red: red, green: green, blue: blue)
-
-        // Set color for current tool
-        appState.setColorForCurrentTool(pickedColor)
-
-        // Reset to select tool after picking
-        appState.selectedAnnotationTool = .select
-        appState.isColorPickingMode = false
     }
 }
 
@@ -506,15 +462,24 @@ struct FreehandAnnotationView: View {
     let canvasSize: CGSize
 
     var body: some View {
-        if let start = annotation.startPoint, let end = annotation.endPoint {
+        if let points = annotation.points, points.count > 1 {
+            Path { path in
+                let first = CGPoint(x: points[0].x * canvasSize.width, y: points[0].y * canvasSize.height)
+                path.move(to: first)
+                for point in points.dropFirst() {
+                    let p = CGPoint(x: point.x * canvasSize.width, y: point.y * canvasSize.height)
+                    path.addLine(to: p)
+                }
+            }
+            .stroke(annotation.color.color, style: StrokeStyle(lineWidth: max(annotation.fontSize * 0.2, 2), lineCap: .round, lineJoin: .round))
+        } else if let start = annotation.startPoint, let end = annotation.endPoint {
             let startPoint = CGPoint(x: start.x * canvasSize.width, y: start.y * canvasSize.height)
             let endPoint = CGPoint(x: end.x * canvasSize.width, y: end.y * canvasSize.height)
-
             Path { path in
                 path.move(to: startPoint)
                 path.addLine(to: endPoint)
             }
-            .stroke(annotation.color.color, style: StrokeStyle(lineWidth: annotation.width, lineCap: .round, lineJoin: .round))
+            .stroke(annotation.color.color, style: StrokeStyle(lineWidth: max(annotation.fontSize * 0.2, 2), lineCap: .round, lineJoin: .round))
         } else {
             EmptyView()
         }
@@ -528,6 +493,7 @@ struct DrawingCanvas: View {
     let onStart: (CGPoint) -> Void
     let onMove: (CGPoint) -> Void
     let onEnd: (CGPoint) -> Void
+    @State private var started = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -539,10 +505,11 @@ struct DrawingCanvas: View {
                         .onChanged { value in
                             if tool != AnnotationTool.select {
                                 let location = value.location
-                                if value.predictedEndLocation != value.location {
+                                if started {
                                     onMove(location)
                                 } else {
                                     onStart(location)
+                                    started = true
                                 }
                             }
                         }
@@ -550,6 +517,7 @@ struct DrawingCanvas: View {
                             if tool != AnnotationTool.select {
                                 onEnd(value.location)
                             }
+                            started = false
                         }
                 )
                 .frame(width: geometry.size.width, height: geometry.size.height)

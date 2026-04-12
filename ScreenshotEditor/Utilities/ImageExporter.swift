@@ -563,15 +563,25 @@ class ImageExporter {
     }
 
     private static func drawFreehand(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize) {
-        guard let start = annotation.startPoint, let end = annotation.endPoint else { return }
-        let startPoint = point(for: start, canvasSize: canvasSize)
-        let endPoint = point(for: end, canvasSize: canvasSize)
         context.setStrokeColor(annotation.color.cgColor)
-        context.setLineWidth(max(annotation.width, 1))
+        context.setLineWidth(max(annotation.fontSize * 0.2, 2))
         context.setLineCap(.round)
+        context.setLineJoin(.round)
+
+        if let points = annotation.points, points.count > 1 {
+            context.beginPath()
+            context.move(to: point(for: points[0], canvasSize: canvasSize))
+            for normalizedPoint in points.dropFirst() {
+                context.addLine(to: point(for: normalizedPoint, canvasSize: canvasSize))
+            }
+            context.strokePath()
+            return
+        }
+
+        guard let start = annotation.startPoint, let end = annotation.endPoint else { return }
         context.beginPath()
-        context.move(to: startPoint)
-        context.addLine(to: endPoint)
+        context.move(to: point(for: start, canvasSize: canvasSize))
+        context.addLine(to: point(for: end, canvasSize: canvasSize))
         context.strokePath()
     }
 
@@ -597,16 +607,25 @@ class ImageExporter {
     }
 
     private static func drawBrushStroke(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize, color: NSColor) {
-        guard let start = annotation.startPoint, let end = annotation.endPoint else { return }
-        let startPoint = point(for: start, canvasSize: canvasSize)
-        let endPoint = point(for: end, canvasSize: canvasSize)
-
         context.setStrokeColor(color.cgColor)
         context.setLineWidth(max(annotation.fontSize, 1))
         context.setLineCap(.round)
+        context.setLineJoin(.round)
+
+        if let points = annotation.points, points.count > 1 {
+            context.beginPath()
+            context.move(to: point(for: points[0], canvasSize: canvasSize))
+            for normalizedPoint in points.dropFirst() {
+                context.addLine(to: point(for: normalizedPoint, canvasSize: canvasSize))
+            }
+            context.strokePath()
+            return
+        }
+
+        guard let start = annotation.startPoint, let end = annotation.endPoint else { return }
         context.beginPath()
-        context.move(to: startPoint)
-        context.addLine(to: endPoint)
+        context.move(to: point(for: start, canvasSize: canvasSize))
+        context.addLine(to: point(for: end, canvasSize: canvasSize))
         context.strokePath()
     }
 

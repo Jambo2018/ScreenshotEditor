@@ -52,10 +52,6 @@ struct CanvasView: View {
                     return true
                 }
 
-                CompactCanvasToolbar()
-                .padding(.vertical, 12)
-                .background(Color(NSColor.controlBackgroundColor))
-
             } else {
                 // Welcome / Empty state
                 WelcomeView()
@@ -150,82 +146,6 @@ struct CanvasView: View {
             }
             break // Only handle first provider
         }
-    }
-}
-
-// MARK: - Canvas Action Button
-
-struct CompactCanvasToolbar: View {
-    @EnvironmentObject var appState: AppState
-
-    var body: some View {
-        HStack(spacing: 10) {
-            CompactCanvasToggle(
-                icon: "circlebadge",
-                title: "Corner",
-                isActive: appState.cornerRadius > 0
-            ) {
-                withAnimation {
-                    appState.cornerRadius = appState.cornerRadius > 0 ? 0 : 12
-                }
-            }
-
-            CompactCanvasToggle(
-                icon: "shadow",
-                title: "Shadow",
-                isActive: appState.showShadow
-            ) {
-                withAnimation {
-                    appState.showShadow.toggle()
-                }
-            }
-
-            CompactCanvasToggle(
-                icon: "square",
-                title: "Border",
-                isActive: appState.showBorder
-            ) {
-                withAnimation {
-                    appState.showBorder.toggle()
-                }
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.windowBackgroundColor))
-        )
-    }
-}
-
-struct CompactCanvasToggle: View {
-    let icon: String
-    let title: String
-    let isActive: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                Text(title)
-                    .font(.caption)
-                    .fontWeight(.medium)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                Capsule()
-                    .fill(isActive ? Color.accentColor.opacity(0.15) : Color(NSColor.controlBackgroundColor))
-            )
-            .overlay(
-                Capsule()
-                    .stroke(isActive ? Color.accentColor : Color.gray.opacity(0.2), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
     }
 }
 

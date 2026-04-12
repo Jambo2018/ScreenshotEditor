@@ -264,36 +264,22 @@ struct SlidersSection: View {
 struct AspectRatioSection: View {
     @EnvironmentObject var appState: AppState
 
-    private let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Canvas Ratio")
-                .font(.headline)
+            HStack {
+                Text("Canvas Ratio")
+                    .font(.headline)
 
-            LazyVGrid(columns: columns, spacing: 8) {
-                ForEach(ExportAspectRatio.allCases, id: \.self) { ratio in
-                    Button(action: {
-                        withAnimation {
-                            appState.exportAspectRatio = ratio
-                        }
-                    }) {
-                        Text(ratio.rawValue)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 34)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(appState.exportAspectRatio == ratio ? Color.accentColor.opacity(0.15) : Color(NSColor.controlBackgroundColor))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(appState.exportAspectRatio == ratio ? Color.accentColor : Color.gray.opacity(0.2), lineWidth: 1)
-                            )
+                Spacer()
+
+                Picker("Canvas Ratio", selection: $appState.exportAspectRatio) {
+                    ForEach(ExportAspectRatio.allCases, id: \.self) { ratio in
+                        Text(ratio.rawValue).tag(ratio)
                     }
-                    .buttonStyle(.plain)
                 }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(width: 120)
             }
 
             if appState.exportAspectRatio == .custom {
@@ -352,35 +338,43 @@ struct ExportSection: View {
             Text("Export")
                 .font(.headline)
 
-            // Format picker
-            Picker("Format", selection: $exportFormat) {
-                Text("PNG").tag(ImageFormat.png)
-                Text("JPG").tag(ImageFormat.jpeg)
-                Text("WebP").tag(ImageFormat.webp)
-            }
-            .pickerStyle(.segmented)
-
-            // Export button
-            Button(action: export) {
-                HStack {
-                    if isExporting {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    } else {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                    Text("Export Image...")
+            HStack(spacing: 8) {
+                Picker("Format", selection: $exportFormat) {
+                    Text("PNG").tag(ImageFormat.png)
+                    Text("JPG").tag(ImageFormat.jpeg)
+                    Text("WebP").tag(ImageFormat.webp)
                 }
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(!appState.hasScreenshot || isExporting)
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(width: 84)
 
-            // Options
-            Toggle("Auto-copy to clipboard", isOn: $appState.autoCopyToClipboard)
-                .font(.caption)
-                .foregroundColor(.secondary)
+                Toggle(isOn: $appState.autoCopyToClipboard) {
+                    Image(systemName: appState.autoCopyToClipboard ? "doc.on.clipboard.fill" : "doc.on.clipboard")
+                        .font(.caption)
+                }
+                .toggleStyle(.button)
+                .help("Auto-copy to clipboard")
+
+                Spacer(minLength: 0)
+
+                Button(action: export) {
+                    HStack(spacing: 6) {
+                        if isExporting {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                        } else {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        Text("Export")
+                            .fontWeight(.semibold)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!appState.hasScreenshot || isExporting)
+            }
         }
     }
 
