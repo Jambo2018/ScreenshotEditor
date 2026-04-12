@@ -142,4 +142,12 @@ extension Color {
         return Color(uiColor: .secondarySystemBackground)
         #endif
     }
+
+    static var editorPanelBackground: Color {
+        #if os(macOS)
+        return Color(nsColor: .windowBackgroundColor)
+        #else
+        return Color(uiColor: .systemBackground)
+        #endif
+    }
 }

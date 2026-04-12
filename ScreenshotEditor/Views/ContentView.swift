@@ -11,8 +11,8 @@ import PhotosUI
 
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showErrorSheet: Bool = false
-    @State private var showMobileControlPanel = false
     @State private var selectedPhotoItem: PhotosPickerItem?
 
     var body: some View {
@@ -21,17 +21,11 @@ struct ContentView: View {
             showErrorSheet = newValue != nil
         }
         .toolbar {
+            #if os(macOS)
             ToolbarItem(placement: .automatic) {
-                #if os(macOS)
                 ToolbarShareButton(appState: appState)
-                #else
-                Button(action: { appState.shareCurrent() }) {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                }
-                .disabled(!appState.hasScreenshot || appState.isExporting)
-                .help("Share to other apps")
-                #endif
             }
+            #endif
         }
         .fileImporter(
             isPresented: $appState.isImportPickerPresented,
@@ -64,12 +58,6 @@ struct ContentView: View {
         .sheet(isPresented: $appState.isCaptureGuidePresented) {
             CaptureGuideSheet()
         }
-        .sheet(isPresented: $showMobileControlPanel) {
-            MobileControlPanelSheet()
-                .environmentObject(appState)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-        }
         #endif
     }
 
@@ -88,11 +76,36 @@ struct ContentView: View {
             .frame(width: 288)
         }
         #else
-        CanvasView(inspectorAction: {
-            showMobileControlPanel = true
-        })
+        CanvasView(showsEditingBottomBar: false)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                MobileTopBar()
+                    .environmentObject(appState)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if appState.hasScreenshot {
+                    VStack(spacing: 0) {
+                        Divider()
+
+                        ControlPanelView(layoutStyle: .inline)
+                            .frame(height: mobileControlPanelHeight)
+                            .background(Color.editorPanelBackground)
+
+                        Divider()
+
+                        EditingBottomBar()
+                            .environmentObject(appState)
+                    }
+                    .background(Color.editorPanelBackground)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.editorPanelBackground.ignoresSafeArea())
         .ignoresSafeArea(.keyboard, edges: .bottom)
         #endif
+    }
+
+    private var mobileControlPanelHeight: CGFloat {
+        horizontalSizeClass == .compact ? 130 : 138
     }
 
     private func handleImageImport(_ result: Result<[URL], Error>) {
@@ -145,6 +158,36 @@ struct ContentView: View {
         }
     }
 }
+
+#if os(iOS)
+private struct MobileTopBar: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        HStack {
+            Spacer(minLength: 0)
+
+            Button(action: { appState.shareCurrent() }) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(appState.hasScreenshot && !appState.isExporting ? .primary : .secondary)
+                    .frame(width: 28, height: 28)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.secondary.opacity(0.08))
+                    )
+            }
+            .buttonStyle(.plain)
+            .disabled(!appState.hasScreenshot || appState.isExporting)
+            .accessibilityLabel("分享")
+        }
+        .padding(.horizontal, 10)
+        .padding(.top, 4)
+        .padding(.bottom, 6)
+        .background(Color.editorPanelBackground.opacity(0.98))
+    }
+}
+#endif
 
 #Preview {
     ContentView()
@@ -230,27 +273,6 @@ private struct CaptureGuideSheet: View {
     }
 }
 
-private struct MobileControlPanelSheet: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            ControlPanelView()
-                .navigationTitle("调整")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("完成") {
-                            dismiss()
-                        }
-                    }
-                }
-        }
-    }
-}
-#endif
-
-#if os(iOS)
 struct PlatformShareSheet: UIViewControllerRepresentable {
     let items: [Any]
 

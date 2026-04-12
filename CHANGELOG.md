@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.13.0] - 2026-04-12
+
+### Changed
+- Refined the iPhone and iPad editing layout so the preview area uses a true full-screen structure with a lightweight in-app share bar instead of the oversized system toolbar footprint.
+- Reworked the mobile adjustment panel into a denser inline layout with smaller background swatches, wrapped ratio/export controls, and slimmer custom sliders for padding, rounded corners, and blur.
+- Tightened the mobile bottom editing dock with smaller action/tool buttons, reduced spacing, and lower vertical padding so annotation controls leave more room for the canvas.
+
+### Fixed
+- Reduced the extra top/bottom dead space in the mobile editor so the main preview area fills the screen more naturally during editing.
+
 ## [0.1.12.0] - 2026-04-12
 
 ### Added
