@@ -13,7 +13,7 @@ struct ControlPanelView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 14) {
                 // Background Section
                 BackgroundSection()
 
@@ -31,7 +31,7 @@ struct ControlPanelView: View {
                 // Export Section
                 ExportSection(exportFormat: $exportFormat)
             }
-            .padding(16)
+            .padding(12)
         }
     }
 }
@@ -42,7 +42,7 @@ struct BackgroundSection: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Background")
                 .font(.headline)
 
@@ -62,7 +62,7 @@ struct BackgroundSection: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
 
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
                         ForEach(GradientPreset.presets) { preset in
                             Button(action: {
                                 withAnimation {
@@ -83,9 +83,9 @@ struct BackgroundSection: View {
                     Text("Custom")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .padding(.top, 4)
+                        .padding(.top, 2)
 
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Button(action: {
                             withAnimation {
                                 appState.useCustomGradient = true
@@ -100,9 +100,9 @@ struct BackgroundSection: View {
                         .buttonStyle(.plain)
 
                         HStack(spacing: 12) {
-                            ColorPicker("Color A", selection: customGradientStartBinding)
+                            ColorPicker("A", selection: customGradientStartBinding)
                             if appState.useSecondCustomGradientColor {
-                                ColorPicker("Color B", selection: customGradientEndBinding)
+                                ColorPicker("B", selection: customGradientEndBinding)
                             }
                         }
                         .font(.caption)
@@ -208,33 +208,34 @@ struct BackgroundSection: View {
     @ViewBuilder
     private func gradientCard(title: String, colors: [Color], isSelected: Bool) -> some View {
         let previewColors = colors.isEmpty ? [Color.white] : colors
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             if previewColors.count == 1 {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(previewColors[0])
-                    .frame(height: 44)
+                    .frame(height: 30)
             } else {
                 LinearGradient(
                     colors: previewColors,
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
-                .frame(height: 44)
+                .frame(height: 30)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
 
             Text(title)
                 .font(.caption2)
                 .foregroundColor(.secondary)
+                .lineLimit(1)
         }
-        .padding(8)
+        .padding(6)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: 8)
                 .fill(Color(NSColor.controlBackgroundColor))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: 8)
                 .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.2), lineWidth: isSelected ? 2 : 1)
         )
     }
@@ -246,15 +247,25 @@ struct SlidersSection: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Blur slider
-            SliderRow(title: "Blur", value: $appState.blurAmount, range: 0...100, unit: "%")
-
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Adjust")
+                .font(.headline)
+            
             // Padding slider
             SliderRow(title: "Padding", value: $appState.padding, range: 0...200, unit: "px")
 
-            // Corner radius slider
-            SliderRow(title: "Corner Radius", value: $appState.cornerRadius, range: 0...40, unit: "px")
+            HStack(alignment: .top, spacing: 10) {
+                SliderRow(title: "Rounded", value: $appState.cornerRadius, range: 0...40, unit: "px")
+                SliderRow(title: "Blur", value: $appState.blurAmount, range: 0...100, unit: "%")
+            }
+
+            HStack(spacing: 8) {
+                Toggle("Shadow", isOn: $appState.showShadow)
+                    .toggleStyle(.button)
+                Toggle("Border", isOn: $appState.showBorder)
+                    .toggleStyle(.button)
+            }
+            .font(.caption)
         }
     }
 }
@@ -308,7 +319,7 @@ struct SliderRow: View {
     let unit: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(title)
                     .font(.caption)
