@@ -6,8 +6,11 @@
 //
 
 import SwiftUI
-import AppKit
 import CoreImage
+
+#if os(iOS)
+import UIKit
+#endif
 
 class ImageExporter {
 
@@ -18,10 +21,10 @@ class ImageExporter {
     }
 
     static func exportImage(
-        sourceImage: NSImage,
+        sourceImage: PlatformImage,
         backgroundType: BackgroundType,
         gradientColors: [Color],
-        backgroundImage: NSImage?,
+        backgroundImage: PlatformImage?,
         blurAmount: Double,
         padding: Double,
         cornerRadius: Double,
@@ -53,10 +56,10 @@ class ImageExporter {
     }
 
     static func renderImage(
-        sourceImage: NSImage,
+        sourceImage: PlatformImage,
         backgroundType: BackgroundType,
         gradientColors: [Color],
-        backgroundImage: NSImage?,
+        backgroundImage: PlatformImage?,
         blurAmount: Double,
         padding: Double,
         cornerRadius: Double,
@@ -66,7 +69,7 @@ class ImageExporter {
         aspectRatio: ExportAspectRatio,
         customAspectRatio: CGSize,
         annotations: [Annotation] = []
-    ) throws -> NSImage {
+    ) throws -> PlatformImage {
         let renderedImage = try renderCGImage(
             sourceImage: sourceImage,
             backgroundType: backgroundType,
@@ -83,17 +86,14 @@ class ImageExporter {
             annotations: annotations
         )
 
-        return NSImage(
-            cgImage: renderedImage,
-            size: NSSize(width: renderedImage.width, height: renderedImage.height)
-        )
+        return PlatformImage.from(cgImage: renderedImage)
     }
 
     private static func renderCGImage(
-        sourceImage: NSImage,
+        sourceImage: PlatformImage,
         backgroundType: BackgroundType,
         gradientColors: [Color],
-        backgroundImage: NSImage?,
+        backgroundImage: PlatformImage?,
         blurAmount: Double,
         padding: Double,
         cornerRadius: Double,
@@ -105,12 +105,12 @@ class ImageExporter {
         annotations: [Annotation]
     ) throws -> CGImage {
 
-        guard let cgImage = sourceImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+        guard let cgImage = sourceImage.cgImageValue else {
             throw ExportError.noImage
         }
 
         let layout = calculateLayout(
-            sourceSize: sourceImage.size,
+            sourceSize: sourceImage.pixelSize,
             padding: padding,
             aspectRatio: aspectRatio,
             customAspectRatio: customAspectRatio
@@ -146,7 +146,7 @@ class ImageExporter {
             context.setShadow(
                 offset: CGSize(width: 0, height: -10),
                 blur: 20,
-                color: NSColor.black.withAlphaComponent(0.3).cgColor
+                color: PlatformColor.black.withAlphaComponent(0.3).cgColor
             )
             context.draw(roundedSource, in: layout.imageRect)
             context.restoreGState()
@@ -162,7 +162,7 @@ class ImageExporter {
                 transform: nil
             )
             context.addPath(borderPath)
-            context.setStrokeColor(NSColor.white.withAlphaComponent(0.5).cgColor)
+            context.setStrokeColor(PlatformColor.white.withAlphaComponent(0.5).cgColor)
             context.setLineWidth(1)
             context.strokePath()
         }
@@ -252,7 +252,7 @@ class ImageExporter {
         in context: CGContext,
         type: BackgroundType,
         gradientColors: [Color],
-        backgroundImage: NSImage?,
+        backgroundImage: PlatformImage?,
         blurAmount: Double,
         size: CGSize
     ) {
@@ -275,7 +275,7 @@ class ImageExporter {
     }
 
     private static func createGradientBackground(colors: [Color], size: CGSize) -> CGImage? {
-        let cgColors = colors.map { NSColor($0).cgColor }
+        let cgColors = colors.map { PlatformColor.from($0).cgColor }
 
         guard !cgColors.isEmpty else {
             return createSolidBackground(color: .white, size: size)
@@ -310,7 +310,7 @@ class ImageExporter {
     }
 
     private static func createSolidBackground(color: Color, size: CGSize) -> CGImage? {
-        createSolidBackground(cgColor: NSColor(color).cgColor, size: size)
+        createSolidBackground(cgColor: PlatformColor.from(color).cgColor, size: size)
     }
 
     private static func createSolidBackground(cgColor: CGColor, size: CGSize) -> CGImage? {
@@ -353,9 +353,9 @@ class ImageExporter {
         return context.createCGImage(output, from: cropRect)
     }
 
-    private static func createImageBackground(backgroundImage: NSImage?, size: CGSize) -> CGImage? {
+    private static func createImageBackground(backgroundImage: PlatformImage?, size: CGSize) -> CGImage? {
         guard let backgroundImage,
-              let cgImage = backgroundImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+              let cgImage = backgroundImage.cgImageValue else {
             return createSolidBackground(color: .gray, size: size)
         }
 
@@ -415,7 +415,7 @@ class ImageExporter {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         )!
 
-        context.setFillColor(CGColor.clear)
+        context.setFillColor(PlatformColor.clear.cgColor)
         context.fill(CGRect(origin: .zero, size: frameSize))
 
         context.setFillColor(deviceColor)
@@ -430,7 +430,7 @@ class ImageExporter {
 
         context.draw(image, in: insetRect)
 
-        context.setStrokeColor(NSColor.black.cgColor)
+        context.setStrokeColor(PlatformColor.black.cgColor)
         context.setLineWidth(2)
         let screenPath = CGPath(
             roundedRect: insetRect,
@@ -461,7 +461,7 @@ class ImageExporter {
             let frameWidth = imageSize.width + (bezelSide * 2)
             let frameHeight = imageSize.height + (bezelTopBottom * 2)
             let insetRect = CGRect(x: bezelSide, y: bezelTopBottom, width: imageSize.width, height: imageSize.height)
-            return (CGSize(width: frameWidth, height: frameHeight), insetRect, NSColor.black.cgColor)
+            return (CGSize(width: frameWidth, height: frameHeight), insetRect, PlatformColor.black.cgColor)
 
         case .macbook:
             let bezelSide: CGFloat = 15
@@ -470,10 +470,10 @@ class ImageExporter {
             let frameWidth = imageSize.width + (bezelSide * 2)
             let frameHeight = imageSize.height + bezelTop + bezelBottom
             let insetRect = CGRect(x: bezelSide, y: bezelTop, width: imageSize.width, height: imageSize.height)
-            return (CGSize(width: frameWidth, height: frameHeight), insetRect, NSColor.darkGray.cgColor)
+            return (CGSize(width: frameWidth, height: frameHeight), insetRect, PlatformColor.darkGray.cgColor)
 
         case .none:
-            return (imageSize, CGRect(origin: .zero, size: imageSize), NSColor.clear.cgColor)
+            return (imageSize, CGRect(origin: .zero, size: imageSize), PlatformColor.clear.cgColor)
         }
     }
 
@@ -481,7 +481,7 @@ class ImageExporter {
         let notchWidth: CGFloat = 100
         let notchHeight: CGFloat = 20
         let notchRect = CGRect(x: (frameSize.width - notchWidth) / 2, y: 0, width: notchWidth, height: notchHeight)
-        context.setFillColor(NSColor.black.cgColor)
+        context.setFillColor(PlatformColor.black.cgColor)
         context.fill(notchRect)
 
         let indicatorRect = CGRect(
@@ -497,7 +497,7 @@ class ImageExporter {
 
     private static func addMacBookDetails(to context: CGContext, frameSize: CGSize) {
         let lineY = frameSize.height - 15
-        context.setStrokeColor(NSColor.lightGray.cgColor)
+        context.setStrokeColor(PlatformColor.lightGray.cgColor)
         context.setLineWidth(1)
         context.beginPath()
         context.move(to: CGPoint(x: 30, y: lineY))
@@ -540,11 +540,11 @@ class ImageExporter {
         case .ellipse:
             drawEllipse(annotation, in: context, canvasSize: canvasSize)
         case .highlight:
-            drawBrushStroke(annotation, in: context, canvasSize: canvasSize, color: annotation.color.nsColor.withAlphaComponent(annotation.width))
+            drawBrushStroke(annotation, in: context, canvasSize: canvasSize, color: annotation.color.platformColor.withAlphaComponent(annotation.width))
         case .blur:
-            drawBrushStroke(annotation, in: context, canvasSize: canvasSize, color: NSColor.black.withAlphaComponent(0.25))
+            drawBrushStroke(annotation, in: context, canvasSize: canvasSize, color: PlatformColor.black.withAlphaComponent(0.25))
         case .mosaic:
-            drawBrushStroke(annotation, in: context, canvasSize: canvasSize, color: NSColor.black.withAlphaComponent(0.45))
+            drawBrushStroke(annotation, in: context, canvasSize: canvasSize, color: PlatformColor.black.withAlphaComponent(0.45))
         case .number:
             drawNumber(annotation, in: context, canvasSize: canvasSize)
         case .freehand:
@@ -574,16 +574,17 @@ class ImageExporter {
     private static func drawText(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize) {
         let drawPoint = point(for: annotation.position, canvasSize: canvasSize)
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: annotation.fontSize),
-            .foregroundColor: annotation.color.nsColor
+            .font: PlatformFont.systemFont(ofSize: annotation.fontSize),
+            .foregroundColor: annotation.color.platformColor
         ]
         let string = NSAttributedString(string: annotation.text, attributes: attributes)
         let textSize = string.size()
 
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
-        string.draw(at: CGPoint(x: drawPoint.x - textSize.width / 2, y: drawPoint.y - textSize.height / 2))
-        NSGraphicsContext.restoreGraphicsState()
+        drawAttributedString(
+            string,
+            at: CGPoint(x: drawPoint.x - textSize.width / 2, y: drawPoint.y - textSize.height / 2),
+            in: context
+        )
     }
 
     private static func drawArrow(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize) {
@@ -666,19 +667,20 @@ class ImageExporter {
         context.fillEllipse(in: circleRect)
 
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.boldSystemFont(ofSize: annotation.fontSize),
-            .foregroundColor: NSColor.white
+            .font: PlatformFont.boldSystemFont(ofSize: annotation.fontSize),
+            .foregroundColor: PlatformColor.white
         ]
         let string = NSAttributedString(string: annotation.text.isEmpty ? "1" : annotation.text, attributes: attributes)
         let textSize = string.size()
 
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
-        string.draw(at: CGPoint(x: center.x - textSize.width / 2, y: center.y - textSize.height / 2))
-        NSGraphicsContext.restoreGraphicsState()
+        drawAttributedString(
+            string,
+            at: CGPoint(x: center.x - textSize.width / 2, y: center.y - textSize.height / 2),
+            in: context
+        )
     }
 
-    private static func drawBrushStroke(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize, color: NSColor) {
+    private static func drawBrushStroke(_ annotation: Annotation, in context: CGContext, canvasSize: CGSize, color: PlatformColor) {
         context.setStrokeColor(color.cgColor)
         context.setLineWidth(max(annotation.fontSize, 1))
         context.setLineCap(.round)
@@ -704,16 +706,29 @@ class ImageExporter {
     // MARK: - Output
 
     private static func imageToData(_ image: CGImage, format: ImageFormat) throws -> Data {
-        let bitmapRep = NSBitmapImageRep(cgImage: image)
+        let platformImage = PlatformImage.from(cgImage: image)
 
         switch format {
         case .png:
-            return bitmapRep.representation(using: .png, properties: [:]) ?? Data()
+            return platformImage.pngRepresentation() ?? Data()
         case .jpeg:
-            return bitmapRep.representation(using: .jpeg, properties: [.compressionFactor: 0.9]) ?? Data()
+            return platformImage.jpegRepresentation(compressionQuality: 0.9) ?? Data()
         case .webp:
-            return bitmapRep.representation(using: .png, properties: [:]) ?? Data()
+            return platformImage.pngRepresentation() ?? Data()
         }
+    }
+
+    private static func drawAttributedString(_ string: NSAttributedString, at point: CGPoint, in context: CGContext) {
+        #if os(macOS)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
+        string.draw(at: point)
+        NSGraphicsContext.restoreGraphicsState()
+        #else
+        UIGraphicsPushContext(context)
+        string.draw(at: point)
+        UIGraphicsPopContext()
+        #endif
     }
 }
 
@@ -723,11 +738,11 @@ private struct ExportLayout {
 }
 
 private extension CodableColor {
-    var nsColor: NSColor {
-        NSColor(calibratedRed: red, green: green, blue: blue, alpha: alpha)
+    var platformColor: PlatformColor {
+        PlatformColor(red: red, green: green, blue: blue, alpha: alpha)
     }
 
     var cgColor: CGColor {
-        nsColor.cgColor
+        platformColor.cgColor
     }
 }

@@ -5,6 +5,7 @@
 //  Left sidebar showing screenshot thumbnails
 //
 
+#if os(macOS)
 import SwiftUI
 
 struct ScreenshotListView: View {
@@ -132,3 +133,4 @@ struct ScreenshotThumbnailView: View {
     ScreenshotListView()
         .environmentObject(AppState())
 }
+#endif

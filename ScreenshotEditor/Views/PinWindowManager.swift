@@ -5,6 +5,7 @@
 //  Singleton manager for all pinned screenshot windows
 //
 
+#if os(macOS)
 import AppKit
 import Foundation
 
@@ -415,3 +416,4 @@ extension PinWindowManager {
         return true
     }
 }
+#endif

@@ -6,11 +6,12 @@
 //
 
 import SwiftUI
-import AppKit
 import UniformTypeIdentifiers
 
 struct CanvasView: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    var inspectorAction: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,12 +28,12 @@ struct CanvasView: View {
             if appState.hasScreenshot {
                 Divider()
 
-                EditingBottomBar()
+                EditingBottomBar(inspectorAction: inspectorAction)
                     .environmentObject(appState)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(Color.editorBackground)
         .onDrop(of: [.image, .fileURL], isTargeted: nil) { providers in
             handleDrop(providers: providers)
             return true
@@ -40,12 +41,20 @@ struct CanvasView: View {
     }
 
     @ViewBuilder
-    private func previewCanvas(for sourceImage: NSImage) -> some View {
+    private func previewCanvas(for sourceImage: PlatformImage) -> some View {
         let previewImage = renderedPreviewImage(for: sourceImage) ?? sourceImage
-        let previewAspectRatio = max(previewImage.size.width, 1) / max(previewImage.size.height, 1)
+        let previewSize = previewImage.pixelSize
+        let previewAspectRatio = max(previewSize.width, 1) / max(previewSize.height, 1)
+        let previewPadding: CGFloat = {
+            #if os(iOS)
+            return horizontalSizeClass == .compact ? 14 : 24
+            #else
+            return 24
+            #endif
+        }()
 
         ZStack {
-            Image(nsImage: previewImage)
+            Image(platformImage: previewImage)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .onDrag {
@@ -57,10 +66,10 @@ struct CanvasView: View {
         }
         .aspectRatio(previewAspectRatio, contentMode: .fit)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(24)
+        .padding(previewPadding)
     }
 
-    private func renderedPreviewImage(for sourceImage: NSImage) -> NSImage? {
+    private func renderedPreviewImage(for sourceImage: PlatformImage) -> PlatformImage? {
         try? ImageExporter.renderImage(
             sourceImage: sourceImage,
             backgroundType: appState.backgroundType,
@@ -80,13 +89,8 @@ struct CanvasView: View {
         )
     }
 
-    private func itemProviderForImage(_ image: NSImage) -> NSItemProvider {
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-            return NSItemProvider()
-        }
-
-        let bitmapRep = NSBitmapImageRep(cgImage: cgImage)
-        guard let pngData = bitmapRep.representation(using: .png, properties: [:]) else {
+    private func itemProviderForImage(_ image: PlatformImage) -> NSItemProvider {
+        guard let pngData = image.pngRepresentation() else {
             return NSItemProvider()
         }
 
@@ -105,9 +109,9 @@ struct CanvasView: View {
             }
 
             if let imageData = item as? Data,
-               let nsImage = NSImage(data: imageData) {
+               let image = PlatformImage(data: imageData) {
                 appState.replaceCurrentImage(
-                    nsImage,
+                    image,
                     name: "Dropped Image \(Date().timeIntervalSince1970)"
                 )
             } else if let url = item as? URL {
@@ -136,6 +140,13 @@ struct WelcomeView: View {
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
 
+            #if os(iOS)
+            Text("在 iPhone / iPad 上可从照片或文件导入；“截图”按钮会告诉你如何先用系统方式截屏。")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            #endif
+
             CanvasActionBar(style: .large)
                 .environmentObject(appState)
 
@@ -163,6 +174,7 @@ struct CanvasActionBar: View {
                 captureButton
             }
 
+            photoButtonIfNeeded
             importButton
         }
         .padding(style == .large ? 0 : 10)
@@ -191,6 +203,23 @@ struct CanvasActionBar: View {
     }
 
     @ViewBuilder
+    private var photoButtonIfNeeded: some View {
+        #if os(iOS)
+        if style == .large {
+            Button(action: { appState.requestPhotoImport() }) {
+                Label("照片", systemImage: "photo.on.rectangle")
+            }
+            .buttonStyle(.borderedProminent)
+        } else {
+            Button(action: { appState.requestPhotoImport() }) {
+                Label("照片", systemImage: "photo.on.rectangle")
+            }
+            .buttonStyle(.bordered)
+        }
+        #endif
+    }
+
+    @ViewBuilder
     private var importButton: some View {
         if style == .large {
             Button(action: { appState.requestImageImport() }) {
@@ -208,44 +237,74 @@ struct CanvasActionBar: View {
 
 struct EditingBottomBar: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private let visibleTools: [AnnotationTool] = [.select, .rectangle, .text, .arrow, .mosaic, .freehand]
+    var inspectorAction: (() -> Void)? = nil
 
     var body: some View {
-        HStack(spacing: 14) {
-            HStack(spacing: 10) {
-                if appState.canCaptureScreen {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 14) {
+                HStack(spacing: 10) {
+                    if appState.canCaptureScreen {
+                        actionButton(
+                            title: "截图",
+                            systemImage: "camera.viewfinder",
+                            prominent: false,
+                            action: appState.requestScreenCapture
+                        )
+                    }
+
+                    #if os(iOS)
                     actionButton(
-                        title: "截图",
-                        systemImage: "camera.viewfinder",
+                        title: "照片",
+                        systemImage: "photo.on.rectangle",
                         prominent: false,
-                        action: appState.requestScreenCapture
+                        action: appState.requestPhotoImport
                     )
+                    #endif
+
+                    actionButton(
+                        title: "导入图片",
+                        systemImage: "square.and.arrow.down",
+                        prominent: true,
+                        action: appState.requestImageImport
+                    )
+
+                    if let inspectorAction {
+                        actionButton(
+                            title: "调整",
+                            systemImage: "slider.horizontal.3",
+                            prominent: false,
+                            action: inspectorAction
+                        )
+                    }
                 }
 
-                actionButton(
-                    title: "导入图片",
-                    systemImage: "square.and.arrow.down",
-                    prominent: true,
-                    action: appState.requestImageImport
-                )
-            }
+                Rectangle()
+                    .fill(Color.white.opacity(0.28))
+                    .frame(width: 1, height: 34)
 
-            Rectangle()
-                .fill(Color.white.opacity(0.28))
-                .frame(width: 1, height: 34)
-
-            HStack(spacing: 8) {
-                ForEach(visibleTools, id: \.self) { tool in
-                    toolButton(tool)
+                HStack(spacing: 8) {
+                    ForEach(visibleTools, id: \.self) { tool in
+                        toolButton(tool)
+                    }
                 }
             }
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, 14)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
         .frame(maxWidth: .infinity)
         .background(
             Color(red: 0.75, green: 0.86, blue: 0.91).opacity(0.92)
         )
+    }
+
+    private var horizontalPadding: CGFloat {
+        #if os(iOS)
+        return horizontalSizeClass == .compact ? 14 : 20
+        #else
+        return 20
+        #endif
     }
 
     private func actionButton(title: String, systemImage: String, prominent: Bool, action: @escaping () -> Void) -> some View {

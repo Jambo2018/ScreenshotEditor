@@ -5,6 +5,7 @@
 //  Full-screen overlay for region selection during screen capture
 //
 
+#if os(macOS)
 import SwiftUI
 
 class CaptureOverlayWindow: NSPanel {
@@ -228,3 +229,4 @@ struct CaptureOverlayView: View {
         )
     }
 }
+#endif

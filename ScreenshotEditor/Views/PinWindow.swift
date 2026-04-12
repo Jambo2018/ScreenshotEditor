@@ -5,6 +5,7 @@
 //  Floating window for pinned screenshots (Snipaste-style)
 //
 
+#if os(macOS)
 import AppKit
 import SwiftUI
 
@@ -408,3 +409,4 @@ struct PinOverlayView: View {
         }
     }
 }
+#endif

@@ -6,7 +6,6 @@
 //
 
 import Vision
-import AppKit
 import Foundation
 
 /// Service for AI-powered annotation suggestions
@@ -22,13 +21,15 @@ class VisionService {
     /// - Parameters:
     ///   - image: The image to analyze
     ///   - completion: Callback with detected text regions
-    func detectTextRegions(in image: NSImage, completion: @escaping ([TextRegion]) -> Void) {
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+    func detectTextRegions(in image: PlatformImage, completion: @escaping ([TextRegion]) -> Void) {
+        guard let cgImage = image.cgImageValue else {
             DispatchQueue.main.async {
                 completion([])
             }
             return
         }
+
+        let imageSize = image.pixelSize
 
         var textRegions: [TextRegion] = []
 
@@ -57,10 +58,10 @@ class VisionService {
                 // Get bounding box in image coordinates
                 let rect = observation.boundingBox
                 let imageRect = CGRect(
-                    x: rect.origin.x * image.size.width,
-                    y: (1 - rect.origin.y - rect.size.height) * image.size.height,
-                    width: rect.size.width * image.size.width,
-                    height: rect.size.height * image.size.height
+                    x: rect.origin.x * imageSize.width,
+                    y: (1 - rect.origin.y - rect.size.height) * imageSize.height,
+                    width: rect.size.width * imageSize.width,
+                    height: rect.size.height * imageSize.height
                 )
 
                 textRegions.append(TextRegion(
@@ -92,13 +93,15 @@ class VisionService {
     /// - Parameters:
     ///   - image: The image to analyze
     ///   - completion: Callback with detected rectangles
-    func detectRectangles(in image: NSImage, completion: @escaping ([CGRect]) -> Void) {
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+    func detectRectangles(in image: PlatformImage, completion: @escaping ([CGRect]) -> Void) {
+        guard let cgImage = image.cgImageValue else {
             DispatchQueue.main.async {
                 completion([])
             }
             return
         }
+
+        let imageSize = image.pixelSize
 
         var rectangles: [CGRect] = []
 
@@ -124,10 +127,10 @@ class VisionService {
             for observation in observations {
                 let rect = observation.boundingBox
                 let imageRect = CGRect(
-                    x: rect.origin.x * image.size.width,
-                    y: (1 - rect.origin.y - rect.size.height) * image.size.height,
-                    width: rect.size.width * image.size.width,
-                    height: rect.size.height * image.size.height
+                    x: rect.origin.x * imageSize.width,
+                    y: (1 - rect.origin.y - rect.size.height) * imageSize.height,
+                    width: rect.size.width * imageSize.width,
+                    height: rect.size.height * imageSize.height
                 )
 
                 rectangles.append(imageRect)
@@ -155,13 +158,15 @@ class VisionService {
     /// - Parameters:
     ///   - image: The image to analyze
     ///   - completion: Callback with detected codes
-    func detectBarcodes(in image: NSImage, completion: @escaping ([BarcodeInfo]) -> Void) {
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+    func detectBarcodes(in image: PlatformImage, completion: @escaping ([BarcodeInfo]) -> Void) {
+        guard let cgImage = image.cgImageValue else {
             DispatchQueue.main.async {
                 completion([])
             }
             return
         }
+
+        let imageSize = image.pixelSize
 
         var barcodes: [BarcodeInfo] = []
 
@@ -187,10 +192,10 @@ class VisionService {
             for observation in observations {
                 let rect = observation.boundingBox
                 let imageRect = CGRect(
-                    x: rect.origin.x * image.size.width,
-                    y: (1 - rect.origin.y - rect.size.height) * image.size.height,
-                    width: rect.size.width * image.size.width,
-                    height: rect.size.height * image.size.height
+                    x: rect.origin.x * imageSize.width,
+                    y: (1 - rect.origin.y - rect.size.height) * imageSize.height,
+                    width: rect.size.width * imageSize.width,
+                    height: rect.size.height * imageSize.height
                 )
 
                 barcodes.append(BarcodeInfo(
@@ -218,13 +223,15 @@ class VisionService {
     /// - Parameters:
     ///   - image: The image to analyze
     ///   - completion: Callback with detected face regions
-    func detectFaces(in image: NSImage, completion: @escaping ([CGRect]) -> Void) {
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+    func detectFaces(in image: PlatformImage, completion: @escaping ([CGRect]) -> Void) {
+        guard let cgImage = image.cgImageValue else {
             DispatchQueue.main.async {
                 completion([])
             }
             return
         }
+
+        let imageSize = image.pixelSize
 
         var faces: [CGRect] = []
 
@@ -250,10 +257,10 @@ class VisionService {
             for observation in observations {
                 let rect = observation.boundingBox
                 let imageRect = CGRect(
-                    x: rect.origin.x * image.size.width,
-                    y: (1 - rect.origin.y - rect.size.height) * image.size.height,
-                    width: rect.size.width * image.size.width,
-                    height: rect.size.height * image.size.height
+                    x: rect.origin.x * imageSize.width,
+                    y: (1 - rect.origin.y - rect.size.height) * imageSize.height,
+                    width: rect.size.width * imageSize.width,
+                    height: rect.size.height * imageSize.height
                 )
 
                 faces.append(imageRect)
@@ -293,11 +300,18 @@ struct BarcodeInfo: Identifiable {
 // MARK: - Vision Framework Availability
 
 extension VisionService {
-    /// Check if Vision Framework features are available (macOS 13+)
+    /// Check if Vision Framework features are available on the current platform.
     static var isAvailable: Bool {
+        #if os(macOS)
         if #available(macOS 13.0, *) {
             return true
         }
-        return true // Basic vision features work on earlier macOS
+        return true
+        #else
+        if #available(iOS 17.0, *) {
+            return true
+        }
+        return true
+        #endif
     }
 }

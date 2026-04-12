@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.12.0] - 2026-04-12
+
+### Added
+- Added multiplatform project configuration so the main app target now appears for macOS, iPhone, and iPad simulator destinations.
+- Added platform-neutral image abstractions plus iOS file-import and share-sheet presentation flows.
+- Added iPhone/iPad full-screen editing flow with an in-canvas action bar and a bottom editing dock.
+- Added iOS photo-library import plus an in-app capture guide so screenshot intake is still discoverable on mobile.
+
+### Changed
+- Refactored shared rendering, screenshot storage, and canvas preview code to use cross-platform image helpers instead of direct AppKit-only types.
+- Routed import and export/share actions through app state so the same editor workflow works on macOS and iOS/iPadOS.
+- Gated macOS-only capture, hotkey, pin-window, and settings implementations behind platform conditionals to keep the shared target compiling cleanly on iPhone and iPad.
+- Moved iPhone/iPad adjustments into a dedicated mobile sheet opened from the bottom bar, while keeping the desktop fixed-width inspector on macOS.
+
+### Fixed
+- Fixed the toolbar share popover anchor on macOS so the share sheet is positioned from the actual share button.
+- Fixed the previous mobile dead-end where import and screenshot actions were not exposed clearly inside the iOS editing flow.
+
 ## [0.1.11.0] - 2026-04-12
 
 ### Added

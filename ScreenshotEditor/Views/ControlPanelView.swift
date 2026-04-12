@@ -73,7 +73,7 @@ struct BackgroundSection: View {
                 Button(action: selectBackgroundImage) {
                     SwatchCard(title: "More...", isSelected: appState.backgroundType == .image && appState.backgroundImage != nil) {
                         if let image = appState.backgroundImage {
-                            Image(nsImage: image)
+                            Image(platformImage: image)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
                         } else {
@@ -100,23 +100,7 @@ struct BackgroundSection: View {
     }
 
     private func selectBackgroundImage() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.png, .jpeg, .heic, .tiff]
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.message = "Select background image"
-
-        panel.begin { response in
-            guard response == .OK, let url = panel.url,
-                  let image = NSImage(contentsOf: url) else { return }
-            DispatchQueue.main.async {
-                withAnimation {
-                    appState.backgroundType = .image
-                    appState.backgroundImage = image
-                    appState.useCustomGradient = false
-                }
-            }
-        }
+        appState.requestBackgroundImageImport()
     }
 
     private func selectPreset(_ preset: GradientPreset) {

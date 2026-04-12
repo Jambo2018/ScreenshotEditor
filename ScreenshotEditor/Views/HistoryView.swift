@@ -5,6 +5,7 @@
 //  History browsing view with grouped thumbnails
 //
 
+#if os(macOS)
 import SwiftUI
 
 struct HistoryView: View {
@@ -220,3 +221,4 @@ struct HistoryThumbnailView: View {
     HistoryView()
         .environmentObject(AppState())
 }
+#endif

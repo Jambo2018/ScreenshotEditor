@@ -5,6 +5,7 @@
 //  Handles screen capture with permissions and region selection
 //
 
+#if os(macOS)
 import AppKit
 import CoreGraphics
 import ScreenCaptureKit
@@ -82,3 +83,4 @@ class ScreenCapturer {
         return NSImage(cgImage: cgImage, size: size)
     }
 }
+#endif

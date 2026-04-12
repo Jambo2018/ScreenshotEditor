@@ -9,7 +9,7 @@ import SwiftUI
 
 struct AnnotationLayerView: View {
     @EnvironmentObject var appState: AppState
-    let sourceImage: NSImage
+    let sourceImage: PlatformImage
 
     var body: some View {
         GeometryReader { geometry in

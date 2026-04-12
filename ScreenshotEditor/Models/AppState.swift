@@ -6,9 +6,14 @@
 //
 
 import SwiftUI
-import AppKit
 import UniformTypeIdentifiers
 import CoreImage
+
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 class AppState: ObservableObject {
     // MARK: - Published Properties
@@ -22,8 +27,10 @@ class AppState: ObservableObject {
     @Published var isCapturing: Bool = false
 
     // Screen capture
+    #if os(macOS)
     private var hotKeyMonitor: GlobalHotKeyMonitor?
     private var captureOverlayWindow: CaptureOverlayWindow?
+    #endif
 
     // Background settings
     @Published var backgroundType: BackgroundType = .color
@@ -32,7 +39,7 @@ class AppState: ObservableObject {
     @Published var customGradientStartColor: Color = .blue
     @Published var customGradientEndColor: Color = .mint
     @Published var useSecondCustomGradientColor: Bool = false
-    @Published var backgroundImage: NSImage?
+    @Published var backgroundImage: PlatformImage?
     @Published var blurAmount: Double = 0
     @Published var padding: Double = 40
     @Published var cornerRadius: Double = 12
@@ -47,6 +54,11 @@ class AppState: ObservableObject {
 
     // Export settings
     @Published var autoCopyToClipboard: Bool = true
+    @Published var isImportPickerPresented = false
+    @Published var isBackgroundImagePickerPresented = false
+    @Published var isPhotoPickerPresented = false
+    @Published var shareSheetFile: ShareSheetFile?
+    @Published var isCaptureGuidePresented = false
     
     // Annotation tools
     @Published var annotations: [Annotation] = []
@@ -109,6 +121,7 @@ class AppState: ObservableObject {
     // MARK: - Screen Capture Setup
 
     private func setupHotKey() {
+        #if os(macOS)
         // Check accessibility permission
         if !GlobalHotKeyMonitor.hasAccessibilityPermission() {
             #if DEBUG
@@ -141,10 +154,12 @@ class AppState: ObservableObject {
         ) { [weak self] in
             self?.closeAllPinWindows()
         }
+        #endif
 
     }
 
     func startScreenCapture() {
+        #if os(macOS)
         // Prevent multiple captures
         if isCapturing {
             #if DEBUG
@@ -225,11 +240,15 @@ class AppState: ObservableObject {
                 self.isCapturing = false
             }
         }
+        #else
+        errorMessage = "Screen capture is not available on this platform yet"
+        #endif
     }
 
     // MARK: - Screen Capture
 
     private func captureRegion(_ rect: CGRect) {
+        #if os(macOS)
         // Capture on background thread to avoid blocking UI
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -241,14 +260,14 @@ class AppState: ObservableObject {
                 return
             }
 
-            let nsImage = NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
+            let capturedImage = PlatformImage.from(cgImage: image)
 
             let screenshot = Screenshot(
                 id: UUID(),
                 name: "Screenshot-\(Date().formatted(.dateTime.hour().minute().second()))",
                 sourceURL: nil,
                 createdAt: Date(),
-                image: nsImage
+                image: capturedImage
             )
 
             // Update UI on main thread
@@ -256,6 +275,7 @@ class AppState: ObservableObject {
                 self.setCurrentScreenshot(screenshot)
             }
         }
+        #endif
     }
 
     // MARK: - Actions
@@ -264,7 +284,7 @@ class AppState: ObservableObject {
         #if os(macOS)
         true
         #else
-        false
+        true
         #endif
     }
 
@@ -272,7 +292,15 @@ class AppState: ObservableObject {
         #if os(macOS)
         startScreenCapture()
         #else
-        errorMessage = "Screen capture is not available on this platform yet"
+        isCaptureGuidePresented = true
+        #endif
+    }
+
+    func requestPhotoImport() {
+        #if os(iOS)
+        isPhotoPickerPresented = true
+        #else
+        requestImageImport()
         #endif
     }
 
@@ -280,11 +308,20 @@ class AppState: ObservableObject {
         #if os(macOS)
         importScreenshot()
         #else
-        errorMessage = "Image import is not available on this platform yet"
+        isImportPickerPresented = true
+        #endif
+    }
+
+    func requestBackgroundImageImport() {
+        #if os(macOS)
+        importBackgroundImage()
+        #else
+        isBackgroundImagePickerPresented = true
         #endif
     }
 
     func importScreenshot() {
+        #if os(macOS)
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.png, .jpeg, .heic]
         panel.allowsMultipleSelection = false
@@ -295,10 +332,33 @@ class AppState: ObservableObject {
             guard response == .OK, let url = panel.url else { return }
             self?.loadImage(from: url)
         }
+        #endif
+    }
+
+    func importBackgroundImage() {
+        #if os(macOS)
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.png, .jpeg, .heic, .tiff]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.message = "Select background image"
+
+        panel.begin { [weak self] response in
+            guard response == .OK, let url = panel.url else { return }
+            self?.loadBackgroundImage(from: url)
+        }
+        #endif
     }
 
     func loadImage(from url: URL) {
-        guard let image = NSImage(contentsOf: url) else {
+        let isScopedResource = url.startAccessingSecurityScopedResource()
+        defer {
+            if isScopedResource {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        guard let image = PlatformImage.load(contentsOf: url) else {
             errorMessage = "Failed to load image"
             return
         }
@@ -306,7 +366,27 @@ class AppState: ObservableObject {
         replaceCurrentImage(image, name: url.lastPathComponent, sourceURL: url)
     }
 
-    func replaceCurrentImage(_ image: NSImage, name: String, sourceURL: URL? = nil) {
+    func loadBackgroundImage(from url: URL) {
+        let isScopedResource = url.startAccessingSecurityScopedResource()
+        defer {
+            if isScopedResource {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        guard let image = PlatformImage.load(contentsOf: url) else {
+            errorMessage = "Failed to load background image"
+            return
+        }
+
+        withAnimation {
+            backgroundType = .image
+            backgroundImage = normalizedImageForEditing(image)
+            useCustomGradient = false
+        }
+    }
+
+    func replaceCurrentImage(_ image: PlatformImage, name: String, sourceURL: URL? = nil) {
         let normalized = normalizedImageForEditing(image)
 
         let screenshot = Screenshot(
@@ -322,11 +402,11 @@ class AppState: ObservableObject {
         }
     }
 
-    private func normalizedImageForEditing(_ image: NSImage) -> NSImage {
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+    private func normalizedImageForEditing(_ image: PlatformImage) -> PlatformImage {
+        guard let cgImage = image.cgImageValue else {
             return image
         }
-        return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        return PlatformImage.from(cgImage: cgImage)
     }
 
     func setCurrentScreenshot(_ screenshot: Screenshot) {
@@ -354,7 +434,7 @@ class AppState: ObservableObject {
         exportImages(images: [(image, screenshot.name)], format: format, copyToClipboard: copyToClipboard)
     }
 
-    func shareCurrent(format: ImageFormat = .png, from anchorView: NSView? = nil) {
+    func shareCurrent(format: ImageFormat = .png, from anchorView: PlatformView? = nil) {
         guard let screenshot = selectedScreenshot,
               let image = screenshot.image else {
             errorMessage = "No screenshot selected"
@@ -400,7 +480,7 @@ class AppState: ObservableObject {
         
         isBatchExporting = true
         
-        var imagesToExport: [(NSImage, String)] = []
+        var imagesToExport: [(PlatformImage, String)] = []
         for id in selectedScreenshotIds {
             if let screenshot = screenshots.first(where: { $0.id == id }),
                let image = screenshot.image {
@@ -417,7 +497,7 @@ class AppState: ObservableObject {
         exportImages(images: imagesToExport, format: format, copyToClipboard: copyToClipboard)
     }
     
-    private func exportImages(images: [(NSImage, String)], format: ImageFormat, copyToClipboard: Bool?) {
+    private func exportImages(images: [(PlatformImage, String)], format: ImageFormat, copyToClipboard: Bool?) {
         let isBatch = images.count > 1
         
         if isBatch {
@@ -443,6 +523,7 @@ class AppState: ObservableObject {
             }
 
             do {
+                #if os(macOS)
                 if isBatch {
                     // Batch export: save to folder
                     let panel = NSOpenPanel()
@@ -511,9 +592,30 @@ class AppState: ObservableObject {
 
                     DispatchQueue.main.async {
                         self.isExporting = false
+                        self.isBatchExporting = false
                         self.showSavePanel(data: data, format: format, copyToClipboard: shouldCopyToClipboard)
                     }
                 }
+                #else
+                let data = try self.renderedImageData(
+                    sourceImage: images.first!.0,
+                    format: format,
+                    backgroundType: currentBackgroundType,
+                    gradientColors: currentGradientColors,
+                    blurAmount: currentBlurAmount,
+                    padding: currentPadding,
+                    cornerRadius: currentCornerRadius,
+                    deviceFrame: currentDeviceFrame,
+                    aspectRatio: currentAspectRatio,
+                    customAspectRatio: currentCustomAspectRatio
+                )
+
+                DispatchQueue.main.async {
+                    self.isExporting = false
+                    self.isBatchExporting = false
+                    self.showSavePanel(data: data, format: format, copyToClipboard: shouldCopyToClipboard)
+                }
+                #endif
             } catch {
                 print("[Export] ERROR: \(error.localizedDescription)")
                 DispatchQueue.main.async {
@@ -526,6 +628,7 @@ class AppState: ObservableObject {
     }
 
     private func showSavePanel(data: Data, format: ImageFormat, copyToClipboard: Bool = true) {
+        #if os(macOS)
         let panel = NSSavePanel()
         panel.allowedContentTypes = [format.contentType]
         panel.nameFieldStringValue = "Screenshot-\(Date().formatted(.dateTime.year().month().day().hour().minute()))\(format.fileExtension)"
@@ -550,16 +653,40 @@ class AppState: ObservableObject {
                 self.errorMessage = "Failed to save: \(error.localizedDescription)"
             }
         }
+        #else
+        do {
+            let fileURL = try writeTemporaryShareFile(
+                data: data,
+                baseName: "Screenshot-\(Date().formatted(.dateTime.year().month().day().hour().minute()))",
+                format: format
+            )
+
+            if copyToClipboard {
+                self.copyToClipboard(data: data)
+            }
+
+            self.shareSheetFile = ShareSheetFile(url: fileURL)
+            self.errorMessage = nil
+        } catch {
+            self.errorMessage = "Failed to prepare export: \(error.localizedDescription)"
+        }
+        #endif
     }
 
     private func copyToClipboard(data: Data) {
+        #if os(macOS)
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setData(data, forType: .png)
+        #else
+        if let image = PlatformImage(data: data) {
+            UIPasteboard.general.image = image
+        }
+        #endif
     }
 
     private func renderedImageData(
-        sourceImage: NSImage,
+        sourceImage: PlatformImage,
         format: ImageFormat,
         backgroundType: BackgroundType? = nil,
         gradientColors: [Color]? = nil,
@@ -600,7 +727,7 @@ class AppState: ObservableObject {
         return fileURL
     }
 
-    private func presentShareSheet(for fileURL: URL, from anchorView: NSView?) {
+    private func presentShareSheet(for fileURL: URL, from anchorView: PlatformView?) {
         #if os(macOS)
         guard let sourceView = anchorView ?? NSApp.keyWindow?.contentView ?? NSApp.mainWindow?.contentView else {
             errorMessage = "Unable to open the share sheet"
@@ -610,7 +737,7 @@ class AppState: ObservableObject {
         let picker = NSSharingServicePicker(items: [fileURL])
         picker.show(relativeTo: sourceView.bounds, of: sourceView, preferredEdge: .maxY)
         #else
-        errorMessage = "Share sheet is not available on this platform yet"
+        shareSheetFile = ShareSheetFile(url: fileURL)
         #endif
     }
 
@@ -704,15 +831,12 @@ class AppState: ObservableObject {
         // Save screenshots as images
         for screenshot in screenshots {
             guard let image = screenshot.image,
-                  let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+                  let pngData = image.pngRepresentation() else {
                 continue
             }
-            
-            let bitmapRep = NSBitmapImageRep(cgImage: cgImage)
-            if let pngData = bitmapRep.representation(using: .png, properties: [:]) {
-                let imageFile = appFolder.appendingPathComponent("\(screenshot.id.uuidString).png")
-                try? pngData.write(to: imageFile)
-            }
+
+            let imageFile = appFolder.appendingPathComponent("\(screenshot.id.uuidString).png")
+            try? pngData.write(to: imageFile)
         }
     }
 
@@ -724,6 +848,7 @@ class AppState: ObservableObject {
     // MARK: - Pin Window Management
 
     func pinCurrentScreenshot() {
+        #if os(macOS)
         guard let screenshot = selectedScreenshot,
               let image = screenshot.image else {
             #if DEBUG
@@ -737,20 +862,24 @@ class AppState: ObservableObject {
         #endif
 
         PinWindowManager.shared.createPin(image: image, position: nil, group: nil)
+        #endif
     }
 
     func closeAllPinWindows() {
+        #if os(macOS)
         #if DEBUG
         print("[Pin] Closing all pin windows")
         #endif
         PinWindowManager.shared.closeAllPins()
+        #endif
     }
 
     // MARK: - Color Helper
 
     func pickColor(at screenPoint: CGPoint) -> Color? {
+        #if os(macOS)
         guard let image = ScreenCapturer.captureScreen(at: screenPoint, size: CGSize(width: 1, height: 1)),
-              let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
+              let cgImage = image.cgImageValue,
               let dataProvider = cgImage.dataProvider,
               let pixelData = dataProvider.data else {
             return nil
@@ -762,6 +891,9 @@ class AppState: ObservableObject {
         let blue = CGFloat(data[2]) / 255.0
 
         return Color(red: red, green: green, blue: blue)
+        #else
+        return nil
+        #endif
     }
 
     func setColorForCurrentTool(_ color: Color) {
@@ -803,6 +935,11 @@ extension ImageFormat {
             return ".png" // Fallback
         }
     }
+}
+
+struct ShareSheetFile: Identifiable {
+    let id = UUID()
+    let url: URL
 }
 
 // MARK: - Supporting Types

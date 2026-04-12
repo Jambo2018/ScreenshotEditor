@@ -5,6 +5,7 @@
 //  Global hotkey monitoring for screen capture trigger
 //
 
+#if os(macOS)
 import AppKit
 import Carbon.HIToolbox
 
@@ -139,3 +140,4 @@ extension NSEvent.ModifierFlags {
     /// Get the control modifier
     static let control: NSEvent.ModifierFlags = .control
 }
+#endif
