@@ -63,49 +63,14 @@ struct ContentView: View {
 
     @ViewBuilder
     private var rootContent: some View {
-        #if os(macOS)
-        HStack(spacing: 0) {
-            CanvasView()
-
-            Divider()
-
-            VStack(spacing: 0) {
-                ControlPanelView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            .frame(width: 288)
+        switch activeShell {
+        case .desktop:
+            DesktopEditorScreen()
+        case .tablet:
+            TabletEditorScreen(sceneState: sceneState)
+        case .phone:
+            PhoneEditorScreen(sceneState: sceneState)
         }
-        #else
-        CanvasView(showsEditingBottomBar: false)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                MobileTopBar()
-                    .environmentObject(appState)
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                if appState.hasScreenshot {
-                    VStack(spacing: 0) {
-                        Divider()
-
-                        ControlPanelView(layoutStyle: .inline)
-                            .frame(height: mobileControlPanelHeight)
-                            .background(Color.editorPanelBackground)
-
-                        Divider()
-
-                        EditingBottomBar()
-                            .environmentObject(appState)
-                    }
-                    .background(Color.editorPanelBackground)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.editorPanelBackground.ignoresSafeArea())
-        .ignoresSafeArea(.keyboard, edges: .bottom)
-        #endif
-    }
-
-    private var mobileControlPanelHeight: CGFloat {
-        horizontalSizeClass == .compact ? 130 : 138
     }
 
     private func handleImageImport(_ result: Result<[URL], Error>) {
@@ -157,21 +122,151 @@ struct ContentView: View {
             }
         }
     }
+
+    private var sceneState: EditorSceneState {
+        if appState.isExporting {
+            return .exporting
+        }
+
+        return appState.hasScreenshot ? .editing : .empty
+    }
+
+    private var activeShell: EditorShell {
+        #if os(macOS)
+        return .desktop
+        #else
+        return horizontalSizeClass == .compact ? .phone : .tablet
+        #endif
+    }
+}
+
+private enum EditorShell {
+    case desktop
+    case tablet
+    case phone
+}
+
+private enum EditorSceneState {
+    case empty
+    case editing
+    case exporting
+
+    var title: String {
+        switch self {
+        case .empty:
+            return "开始"
+        case .editing:
+            return "编辑"
+        case .exporting:
+            return "导出中"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .empty:
+            return "导入或截图后开始调整"
+        case .editing:
+            return "预览优先，工具分区"
+        case .exporting:
+            return "请稍候，正在生成输出"
+        }
+    }
 }
 
 #if os(iOS)
-private struct MobileTopBar: View {
+private struct PhoneEditorScreen: View {
+    let sceneState: EditorSceneState
+
+    var body: some View {
+        CanvasView(showsEditingBottomBar: false)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                EditorTopBar(sceneState: sceneState, layout: .phone)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if sceneState != .empty {
+                    EditingWorkspace(layout: .phone)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.editorPanelBackground.ignoresSafeArea())
+            .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+}
+
+private struct TabletEditorScreen: View {
+    let sceneState: EditorSceneState
+
+    var body: some View {
+        CanvasView(showsEditingBottomBar: false)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                EditorTopBar(sceneState: sceneState, layout: .tablet)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if sceneState != .empty {
+                    EditingWorkspace(layout: .tablet)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.editorPanelBackground.ignoresSafeArea())
+            .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+}
+
+private enum MobileEditorLayout {
+    case phone
+    case tablet
+
+    var controlPanelHeight: CGFloat {
+        switch self {
+        case .phone:
+            return 132
+        case .tablet:
+            return 148
+        }
+    }
+
+    var titleSpacing: CGFloat {
+        switch self {
+        case .phone:
+            return 2
+        case .tablet:
+            return 3
+        }
+    }
+
+    var padding: EdgeInsets {
+        switch self {
+        case .phone:
+            return EdgeInsets(top: 6, leading: 10, bottom: 8, trailing: 10)
+        case .tablet:
+            return EdgeInsets(top: 8, leading: 14, bottom: 10, trailing: 14)
+        }
+    }
+}
+
+private struct EditorTopBar: View {
     @EnvironmentObject var appState: AppState
+    let sceneState: EditorSceneState
+    let layout: MobileEditorLayout
 
     var body: some View {
         HStack {
-            Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: layout.titleSpacing) {
+                Text(sceneState.title)
+                    .font(.system(size: layout == .phone ? 13 : 14, weight: .semibold))
+                Text(sceneState.subtitle)
+                    .font(.system(size: layout == .phone ? 10 : 11))
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer(minLength: 12)
 
             Button(action: { appState.shareCurrent() }) {
                 Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: layout == .phone ? 12 : 13, weight: .semibold))
                     .foregroundColor(appState.hasScreenshot && !appState.isExporting ? .primary : .secondary)
-                    .frame(width: 28, height: 28)
+                    .frame(width: layout == .phone ? 28 : 30, height: layout == .phone ? 28 : 30)
                     .background(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .fill(Color.secondary.opacity(0.08))
@@ -181,10 +276,70 @@ private struct MobileTopBar: View {
             .disabled(!appState.hasScreenshot || appState.isExporting)
             .accessibilityLabel("分享")
         }
-        .padding(.horizontal, 10)
-        .padding(.top, 4)
-        .padding(.bottom, 6)
+        .padding(layout.padding)
         .background(Color.editorPanelBackground.opacity(0.98))
+    }
+}
+
+private struct EditingWorkspace: View {
+    let layout: MobileEditorLayout
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Divider()
+
+            ControlPanelView(layoutStyle: .inline)
+                .frame(height: layout.controlPanelHeight)
+                .background(Color.editorPanelBackground)
+
+            Divider()
+
+            EditingBottomBar()
+        }
+        .background(Color.editorPanelBackground)
+    }
+}
+#endif
+
+#if !os(iOS)
+private struct PhoneEditorScreen: View {
+    let sceneState: EditorSceneState
+
+    var body: some View {
+        EmptyView()
+    }
+}
+
+private struct TabletEditorScreen: View {
+    let sceneState: EditorSceneState
+
+    var body: some View {
+        EmptyView()
+    }
+}
+#endif
+
+#if os(macOS)
+private struct DesktopEditorScreen: View {
+    var body: some View {
+        HStack(spacing: 0) {
+            CanvasView()
+
+            Divider()
+
+            VStack(spacing: 0) {
+                ControlPanelView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(width: 304)
+            .background(Color.editorPanelBackground)
+        }
+    }
+}
+#else
+private struct DesktopEditorScreen: View {
+    var body: some View {
+        EmptyView()
     }
 }
 #endif

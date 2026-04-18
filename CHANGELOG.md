@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.15.0] - 2026-04-18
+
+### Added
+- Added an information-architecture document that defines canonical app states, action ownership, and separate platform shells for desktop, tablet, and phone.
+
+### Changed
+- Reworked `ContentView` so the app now routes through dedicated desktop, tablet, and phone screen shells instead of composing every platform layout directly in one inline branch.
+- Introduced shared scene-state and shell-selection logic to make the top-level editor flow explicit before deeper state and UI refactors.
+
 ## [0.1.14.0] - 2026-04-18
 
 ### Added
