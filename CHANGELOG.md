@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.17.0] - 2026-04-18
+
+### Changed
+- Rebuilt the Phase 3 editor shells so macOS now uses a deliberate preview-plus-inspector layout, iPad uses a preview-first adaptive split workspace, and iPhone uses a full-screen editor with compact persistent tool panels.
+- Reworked the mobile adjustment area into dedicated compact cards for background, canvas adjustments, and export controls instead of reusing the desktop inline inspector wholesale.
+- Refactored the editing bottom bar to support desktop, tablet, and phone variants, including a wrapped phone-native annotation tool grid and tighter action-button sizing.
+
 ## [0.1.16.0] - 2026-04-18
 
 ### Added

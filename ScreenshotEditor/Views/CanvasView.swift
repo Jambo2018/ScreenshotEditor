@@ -305,38 +305,35 @@ struct CanvasActionBar: View {
 }
 
 struct EditingBottomBar: View {
+    enum LayoutStyle: Equatable {
+        case desktop
+        case tablet
+        case phone
+    }
+
     @EnvironmentObject var appState: AppState
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private let visibleTools: [AnnotationTool] = [.select, .rectangle, .text, .arrow, .mosaic, .freehand]
+    var layoutStyle: LayoutStyle? = nil
 
     var body: some View {
-        HStack(spacing: barSpacing) {
-            HStack(spacing: actionSpacing) {
-                if appState.canCaptureScreen {
-                    actionButton(
-                        title: "截图",
-                        systemImage: "camera.viewfinder",
-                        prominent: false,
-                        action: appState.requestScreenCapture
-                    )
-                }
-
-                #if os(iOS)
-                actionButton(
-                    title: "照片",
-                    systemImage: "photo.on.rectangle",
-                    prominent: false,
-                    action: appState.requestPhotoImport
-                )
-                #endif
-
-                actionButton(
-                    title: "导入",
-                    systemImage: "square.and.arrow.down",
-                    prominent: true,
-                    action: appState.requestImageImport
-                )
+        Group {
+            switch resolvedLayoutStyle {
+            case .phone:
+                phoneBody
+            case .tablet, .desktop:
+                rowBody
             }
+        }
+        .padding(.horizontal, horizontalPadding)
+        .padding(.vertical, verticalPadding)
+        .frame(maxWidth: .infinity)
+        .background(barBackground)
+    }
+
+    private var rowBody: some View {
+        HStack(spacing: barSpacing) {
+            actionsRow
 
             Rectangle()
                 .fill(Color.white.opacity(0.28))
@@ -350,106 +347,151 @@ struct EditingBottomBar: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, horizontalPadding)
-        .padding(.vertical, verticalPadding)
-        .frame(maxWidth: .infinity)
-        .background(
-            Color(red: 0.75, green: 0.86, blue: 0.91).opacity(0.92)
-        )
+    }
+
+    private var phoneBody: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            actionsRow
+
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: toolSpacing), count: 3),
+                spacing: toolSpacing
+            ) {
+                ForEach(visibleTools, id: \.self) { tool in
+                    toolButton(tool)
+                }
+            }
+        }
+    }
+
+    private var actionsRow: some View {
+        HStack(spacing: actionSpacing) {
+            if appState.canCaptureScreen {
+                actionButton(
+                    title: "截图",
+                    systemImage: "camera.viewfinder",
+                    prominent: false,
+                    action: appState.requestScreenCapture
+                )
+            }
+
+            #if os(iOS)
+            actionButton(
+                title: "照片",
+                systemImage: "photo.on.rectangle",
+                prominent: false,
+                action: appState.requestPhotoImport
+            )
+            #endif
+
+            actionButton(
+                title: "导入",
+                systemImage: "square.and.arrow.down",
+                prominent: true,
+                action: appState.requestImageImport
+            )
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var resolvedLayoutStyle: LayoutStyle {
+        if let layoutStyle {
+            return layoutStyle
+        }
+
+        #if os(iOS)
+        return horizontalSizeClass == .compact ? .phone : .tablet
+        #else
+        return .desktop
+        #endif
+    }
+
+    private var barBackground: Color {
+        Color(red: 0.75, green: 0.86, blue: 0.91).opacity(resolvedLayoutStyle == .desktop ? 0.92 : 0.96)
     }
 
     private var horizontalPadding: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 6 : 8
-        #else
-        return 20
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 8
+        case .tablet:
+            return 10
+        case .desktop:
+            return 20
+        }
     }
 
     private var verticalPadding: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 4 : 5
-        #else
-        return 14
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 6
+        case .tablet:
+            return 7
+        case .desktop:
+            return 14
+        }
     }
 
     private var actionSpacing: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 3 : 4
-        #else
-        return 10
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 5
+        case .tablet:
+            return 6
+        case .desktop:
+            return 10
+        }
     }
 
     private var barSpacing: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 5 : 6
-        #else
-        return 14
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 0
+        case .tablet:
+            return 8
+        case .desktop:
+            return 14
+        }
     }
 
     private var toolSpacing: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 2 : 3
-        #else
-        return 8
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 5
+        case .tablet:
+            return 4
+        case .desktop:
+            return 8
+        }
     }
 
     private var separatorHeight: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 16 : 18
-        #else
-        return 34
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 0
+        case .tablet:
+            return 18
+        case .desktop:
+            return 34
+        }
     }
 
     private func actionButton(title: String, systemImage: String, prominent: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Group {
-                #if os(iOS)
-                if horizontalSizeClass == .compact {
-                    Image(systemName: systemImage)
-                        .font(.system(size: actionIconSize, weight: .semibold))
-                        .foregroundColor(prominent ? .white : Color.primary)
-                        .frame(width: 22, height: 22)
-                        .background(
-                            RoundedRectangle(cornerRadius: actionCornerRadius, style: .continuous)
-                                .fill(prominent ? Color.accentColor : Color.white.opacity(0.22))
-                        )
-                } else {
-                    HStack(spacing: buttonIconSpacing) {
-                        Image(systemName: systemImage)
-                            .font(.system(size: actionIconSize, weight: .semibold))
-                        Text(title)
-                            .font(.system(size: actionTitleSize, weight: .semibold))
-                    }
-                    .foregroundColor(prominent ? .white : Color.primary)
-                    .padding(.horizontal, actionHorizontalPadding)
-                    .padding(.vertical, actionVerticalPadding)
-                    .background(
-                        RoundedRectangle(cornerRadius: actionCornerRadius, style: .continuous)
-                            .fill(prominent ? Color.accentColor : Color.white.opacity(0.22))
-                    )
-                }
-                #else
-                HStack(spacing: buttonIconSpacing) {
-                    Image(systemName: systemImage)
-                        .font(.system(size: actionIconSize, weight: .semibold))
-                    Text(title)
-                        .font(.system(size: actionTitleSize, weight: .semibold))
-                }
-                .foregroundColor(prominent ? .white : Color.primary)
-                .padding(.horizontal, actionHorizontalPadding)
-                .padding(.vertical, actionVerticalPadding)
-                .background(
-                    RoundedRectangle(cornerRadius: actionCornerRadius, style: .continuous)
-                        .fill(prominent ? Color.accentColor : Color.white.opacity(0.22))
-                )
-                #endif
+            HStack(spacing: buttonIconSpacing) {
+                Image(systemName: systemImage)
+                    .font(.system(size: actionIconSize, weight: .semibold))
+                Text(title)
+                    .font(.system(size: actionTitleSize, weight: .semibold))
             }
+            .foregroundColor(prominent ? .white : Color.primary)
+            .padding(.horizontal, actionHorizontalPadding)
+            .padding(.vertical, actionVerticalPadding)
+            .background(
+                RoundedRectangle(cornerRadius: actionCornerRadius, style: .continuous)
+                    .fill(prominent ? Color.accentColor : Color.white.opacity(0.22))
+            )
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
@@ -463,89 +505,134 @@ struct EditingBottomBar: View {
                 appState.selectedAnnotationTool = tool
             }
         }) {
-            Image(systemName: tool.icon)
-                .font(.system(size: toolIconSize, weight: .semibold))
-                .foregroundColor(isSelected ? .white : Color.primary.opacity(0.82))
-                .frame(width: toolButtonSize, height: toolButtonSize)
-                .background(
-                    RoundedRectangle(cornerRadius: toolCornerRadius, style: .continuous)
-                        .fill(isSelected ? Color.accentColor : Color.white.opacity(0.18))
-                )
+            Group {
+                if resolvedLayoutStyle == .phone {
+                    HStack(spacing: 5) {
+                        Image(systemName: tool.icon)
+                            .font(.system(size: toolIconSize, weight: .semibold))
+                        Text(tool.title)
+                            .font(.system(size: 10, weight: .semibold))
+                            .lineLimit(1)
+                    }
+                    .foregroundColor(isSelected ? .white : Color.primary.opacity(0.82))
+                    .frame(maxWidth: .infinity, minHeight: toolButtonSize)
+                    .background(
+                        RoundedRectangle(cornerRadius: toolCornerRadius, style: .continuous)
+                            .fill(isSelected ? Color.accentColor : Color.white.opacity(0.18))
+                    )
+                } else {
+                    Image(systemName: tool.icon)
+                        .font(.system(size: toolIconSize, weight: .semibold))
+                        .foregroundColor(isSelected ? .white : Color.primary.opacity(0.82))
+                        .frame(width: toolButtonSize, height: toolButtonSize)
+                        .background(
+                            RoundedRectangle(cornerRadius: toolCornerRadius, style: .continuous)
+                                .fill(isSelected ? Color.accentColor : Color.white.opacity(0.18))
+                        )
+                }
+            }
         }
         .buttonStyle(.plain)
         .help(tool.title)
     }
 
     private var actionTitleSize: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 9 : 10
-        #else
-        return 16
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 10
+        case .tablet:
+            return 10
+        case .desktop:
+            return 16
+        }
     }
 
     private var actionIconSize: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 9 : 10
-        #else
-        return 16
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 10
+        case .tablet:
+            return 10
+        case .desktop:
+            return 16
+        }
     }
 
     private var buttonIconSpacing: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 2 : 3
-        #else
-        return 8
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 3
+        case .tablet:
+            return 3
+        case .desktop:
+            return 8
+        }
     }
 
     private var actionHorizontalPadding: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 6 : 7
-        #else
-        return 18
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 8
+        case .tablet:
+            return 8
+        case .desktop:
+            return 18
+        }
     }
 
     private var actionVerticalPadding: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 4 : 5
-        #else
-        return 12
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 5
+        case .tablet:
+            return 5
+        case .desktop:
+            return 12
+        }
     }
 
     private var actionCornerRadius: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 6 : 7
-        #else
-        return 14
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 7
+        case .tablet:
+            return 7
+        case .desktop:
+            return 14
+        }
     }
 
     private var toolIconSize: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 10 : 11
-        #else
-        return 15
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 10
+        case .tablet:
+            return 11
+        case .desktop:
+            return 15
+        }
     }
 
     private var toolButtonSize: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 22 : 24
-        #else
-        return 38
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 28
+        case .tablet:
+            return 24
+        case .desktop:
+            return 38
+        }
     }
 
     private var toolCornerRadius: CGFloat {
-        #if os(iOS)
-        return horizontalSizeClass == .compact ? 6 : 7
-        #else
-        return 12
-        #endif
+        switch resolvedLayoutStyle {
+        case .phone:
+            return 7
+        case .tablet:
+            return 7
+        case .desktop:
+            return 12
+        }
     }
 }
 

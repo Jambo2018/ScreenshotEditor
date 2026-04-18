@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  ScreenshotEditor
 //
-//  Main content view with three-column layout
+//  Main content view with platform-specific editor shells
 //
 
 import SwiftUI
@@ -17,48 +17,48 @@ struct ContentView: View {
 
     var body: some View {
         rootContent
-        .onChange(of: appState.errorMessage) { _, newValue in
-            showErrorSheet = newValue != nil
-        }
-        .toolbar {
-            #if os(macOS)
-            ToolbarItem(placement: .automatic) {
-                ToolbarShareButton(appState: appState)
+            .onChange(of: appState.errorMessage) { _, newValue in
+                showErrorSheet = newValue != nil
+            }
+            .toolbar {
+                #if os(macOS)
+                ToolbarItem(placement: .automatic) {
+                    ToolbarShareButton(appState: appState)
+                }
+                #endif
+            }
+            .fileImporter(
+                isPresented: $appState.isImportPickerPresented,
+                allowedContentTypes: [.png, .jpeg, .heic, .tiff, .image],
+                allowsMultipleSelection: false,
+                onCompletion: handleImageImport
+            )
+            .fileImporter(
+                isPresented: $appState.isBackgroundImagePickerPresented,
+                allowedContentTypes: [.png, .jpeg, .heic, .tiff, .image],
+                allowsMultipleSelection: false,
+                onCompletion: handleBackgroundImageImport
+            )
+            .photosPicker(
+                isPresented: $appState.isPhotoPickerPresented,
+                selection: $selectedPhotoItem,
+                matching: .images,
+                preferredItemEncoding: .automatic
+            )
+            .sheet(isPresented: $showErrorSheet) {
+                ErrorView(message: $appState.errorMessage)
+            }
+            .sheet(item: $appState.shareSheetFile) { item in
+                PlatformShareSheet(items: [item.url])
+            }
+            .onChange(of: selectedPhotoItem) { _, newItem in
+                handlePhotoSelection(newItem)
+            }
+            #if os(iOS)
+            .sheet(isPresented: $appState.isCaptureGuidePresented) {
+                CaptureGuideSheet()
             }
             #endif
-        }
-        .fileImporter(
-            isPresented: $appState.isImportPickerPresented,
-            allowedContentTypes: [.png, .jpeg, .heic, .tiff, .image],
-            allowsMultipleSelection: false,
-            onCompletion: handleImageImport
-        )
-        .fileImporter(
-            isPresented: $appState.isBackgroundImagePickerPresented,
-            allowedContentTypes: [.png, .jpeg, .heic, .tiff, .image],
-            allowsMultipleSelection: false,
-            onCompletion: handleBackgroundImageImport
-        )
-        .photosPicker(
-            isPresented: $appState.isPhotoPickerPresented,
-            selection: $selectedPhotoItem,
-            matching: .images,
-            preferredItemEncoding: .automatic
-        )
-        .sheet(isPresented: $showErrorSheet) {
-            ErrorView(message: $appState.errorMessage)
-        }
-        .sheet(item: $appState.shareSheetFile) { item in
-            PlatformShareSheet(items: [item.url])
-        }
-        .onChange(of: selectedPhotoItem) { _, newItem in
-            handlePhotoSelection(newItem)
-        }
-        #if os(iOS)
-        .sheet(isPresented: $appState.isCaptureGuidePresented) {
-            CaptureGuideSheet()
-        }
-        #endif
     }
 
     @ViewBuilder
@@ -167,9 +167,108 @@ private enum EditorSceneState {
         case .empty:
             return "导入或截图后开始调整"
         case .editing:
-            return "预览优先，工具分区"
+            return "预览优先，工具常驻"
         case .exporting:
             return "请稍候，正在生成输出"
+        }
+    }
+}
+
+private enum WorkspaceDensity: Equatable {
+    case phone
+    case tablet
+
+    var cardPadding: CGFloat {
+        switch self {
+        case .phone:
+            return 9
+        case .tablet:
+            return 12
+        }
+    }
+
+    var cardSpacing: CGFloat {
+        switch self {
+        case .phone:
+            return 7
+        case .tablet:
+            return 10
+        }
+    }
+
+    var titleSize: CGFloat {
+        switch self {
+        case .phone:
+            return 11
+        case .tablet:
+            return 12
+        }
+    }
+
+    var subtitleSize: CGFloat {
+        switch self {
+        case .phone:
+            return 9
+        case .tablet:
+            return 10
+        }
+    }
+
+    var swatchSize: CGFloat {
+        switch self {
+        case .phone:
+            return 22
+        case .tablet:
+            return 28
+        }
+    }
+
+    var swatchColumns: Int {
+        switch self {
+        case .phone:
+            return 5
+        case .tablet:
+            return 5
+        }
+    }
+
+    var gridSpacing: CGFloat {
+        switch self {
+        case .phone:
+            return 5
+        case .tablet:
+            return 7
+        }
+    }
+
+    var menuWidth: CGFloat {
+        switch self {
+        case .phone:
+            return 80
+        case .tablet:
+            return 92
+        }
+    }
+}
+
+private struct EditorCanvasRegion: View {
+    let shell: EditorShell
+
+    var body: some View {
+        CanvasView(showsEditingBottomBar: false)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(canvasPadding)
+            .background(Color.editorPanelBackground)
+    }
+
+    private var canvasPadding: EdgeInsets {
+        switch shell {
+        case .desktop:
+            return EdgeInsets(top: 16, leading: 18, bottom: 16, trailing: 18)
+        case .tablet:
+            return EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
+        case .phone:
+            return EdgeInsets()
         }
     }
 }
@@ -179,18 +278,24 @@ private struct PhoneEditorScreen: View {
     let sceneState: EditorSceneState
 
     var body: some View {
-        CanvasView(showsEditingBottomBar: false)
-            .safeAreaInset(edge: .top, spacing: 0) {
+        ZStack {
+            Color.editorPanelBackground.ignoresSafeArea()
+
+            VStack(spacing: 0) {
                 EditorTopBar(sceneState: sceneState, layout: .phone)
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Divider()
+                EditorCanvasRegion(shell: .phone)
+
                 if sceneState != .empty {
-                    EditingWorkspace(layout: .phone)
+                    Divider()
+                    PhoneEditingWorkspace()
+                    Divider()
+                    EditingBottomBar(layoutStyle: .phone)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.editorPanelBackground.ignoresSafeArea())
-            .ignoresSafeArea(.keyboard, edges: .bottom)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }
 
@@ -198,33 +303,30 @@ private struct TabletEditorScreen: View {
     let sceneState: EditorSceneState
 
     var body: some View {
-        CanvasView(showsEditingBottomBar: false)
-            .safeAreaInset(edge: .top, spacing: 0) {
+        ZStack {
+            Color.editorPanelBackground.ignoresSafeArea()
+
+            VStack(spacing: 0) {
                 EditorTopBar(sceneState: sceneState, layout: .tablet)
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Divider()
+                EditorCanvasRegion(shell: .tablet)
+
                 if sceneState != .empty {
-                    EditingWorkspace(layout: .tablet)
+                    Divider()
+                    TabletEditingWorkspace()
+                    Divider()
+                    EditingBottomBar(layoutStyle: .tablet)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.editorPanelBackground.ignoresSafeArea())
-            .ignoresSafeArea(.keyboard, edges: .bottom)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }
 
-private enum MobileEditorLayout {
+private enum MobileEditorLayout: Equatable {
     case phone
     case tablet
-
-    var controlPanelHeight: CGFloat {
-        switch self {
-        case .phone:
-            return 132
-        case .tablet:
-            return 148
-        }
-    }
 
     var titleSpacing: CGFloat {
         switch self {
@@ -251,16 +353,21 @@ private struct EditorTopBar: View {
     let layout: MobileEditorLayout
 
     var body: some View {
-        HStack {
+        HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: layout.titleSpacing) {
                 Text(sceneState.title)
                     .font(.system(size: layout == .phone ? 13 : 14, weight: .semibold))
                 Text(sceneState.subtitle)
                     .font(.system(size: layout == .phone ? 10 : 11))
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
             }
 
-            Spacer(minLength: 12)
+            Spacer(minLength: 10)
+
+            if appState.hasScreenshot {
+                StatusChip(title: sceneState == .exporting ? "处理中" : "已载入")
+            }
 
             Button(action: { appState.shareCurrent() }) {
                 Image(systemName: "square.and.arrow.up")
@@ -281,21 +388,71 @@ private struct EditorTopBar: View {
     }
 }
 
-private struct EditingWorkspace: View {
-    let layout: MobileEditorLayout
+private struct PhoneEditingWorkspace: View {
+    @State private var exportFormat: ImageFormat = .png
 
     var body: some View {
-        VStack(spacing: 0) {
-            Divider()
+        VStack(spacing: 8) {
+            WorkspaceCard(
+                title: "画布",
+                subtitle: "背景、留白、圆角、模糊",
+                density: .phone
+            ) {
+                VStack(spacing: 8) {
+                    CompactBackgroundPalette(density: .phone)
+                    Divider()
+                    CompactAdjustmentsSection()
+                }
+            }
 
-            ControlPanelView(layoutStyle: .inline)
-                .frame(height: layout.controlPanelHeight)
-                .background(Color.editorPanelBackground)
-
-            Divider()
-
-            EditingBottomBar()
+            WorkspaceCard(
+                title: "输出",
+                subtitle: "比例、格式、导出",
+                density: .phone
+            ) {
+                CompactOutputSection(exportFormat: $exportFormat, density: .phone)
+            }
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(Color.editorPanelBackground)
+    }
+}
+
+private struct TabletEditingWorkspace: View {
+    @State private var exportFormat: ImageFormat = .png
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            WorkspaceCard(
+                title: "背景",
+                subtitle: "渐变、透明、图片背景",
+                density: .tablet
+            ) {
+                CompactBackgroundPalette(density: .tablet)
+            }
+            .frame(maxWidth: .infinity, alignment: .top)
+
+            WorkspaceCard(
+                title: "调整",
+                subtitle: "留白、圆角、模糊",
+                density: .tablet
+            ) {
+                CompactAdjustmentsSection()
+            }
+            .frame(width: 248, alignment: .top)
+
+            WorkspaceCard(
+                title: "输出",
+                subtitle: "比例、格式、导出",
+                density: .tablet
+            ) {
+                CompactOutputSection(exportFormat: $exportFormat, density: .tablet)
+            }
+            .frame(width: 250, alignment: .top)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .background(Color.editorPanelBackground)
     }
 }
@@ -321,19 +478,173 @@ private struct TabletEditorScreen: View {
 
 #if os(macOS)
 private struct DesktopEditorScreen: View {
+    @EnvironmentObject var appState: AppState
+
     var body: some View {
         HStack(spacing: 0) {
-            CanvasView()
+            VStack(spacing: 0) {
+                DesktopContextBar()
+                Divider()
+                EditorCanvasRegion(shell: .desktop)
+
+                if appState.hasScreenshot {
+                    Divider()
+                    EditingBottomBar(layoutStyle: .desktop)
+                }
+            }
 
             Divider()
 
-            VStack(spacing: 0) {
-                ControlPanelView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            .frame(width: 304)
-            .background(Color.editorPanelBackground)
+            DesktopInspector()
+                .frame(width: 332)
+                .frame(maxHeight: .infinity)
+                .background(Color.editorPanelBackground)
         }
+        .background(Color.editorPanelBackground)
+    }
+}
+
+private struct DesktopContextBar: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(appState.hasScreenshot ? "Desktop Editor" : "Ready to import")
+                    .font(.headline)
+                Text(contextSubtitle)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer(minLength: 12)
+
+            if appState.hasScreenshot {
+                StatusChip(title: appState.isExporting ? "Exporting" : "Preview = Export")
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .background(Color.editorPanelBackground)
+    }
+
+    private var contextSubtitle: String {
+        if let screenshot = appState.selectedScreenshot?.name, !screenshot.isEmpty {
+            return screenshot
+        }
+
+        return "Capture or import a screenshot to start editing."
+    }
+}
+
+private struct DesktopInspector: View {
+    @State private var exportFormat: ImageFormat = .png
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                DesktopInspectorStatusCard()
+                DesktopInspectorCard {
+                    BackgroundSection(layoutStyle: .sidebar)
+                    Divider()
+                    SlidersSection(layoutStyle: .sidebar)
+                }
+                DesktopInspectorCard {
+                    AspectRatioSection(layoutStyle: .sidebar)
+                    Divider()
+                    ExportSection(exportFormat: $exportFormat, layoutStyle: .sidebar)
+                }
+                DesktopAnnotationInspectorCard()
+            }
+            .padding(14)
+        }
+        .scrollIndicators(.hidden)
+    }
+}
+
+private struct DesktopInspectorStatusCard: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        DesktopInspectorCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Workflow")
+                    .font(.headline)
+
+                LabeledContent("State") {
+                    Text(appState.isExporting ? "Exporting" : (appState.hasScreenshot ? "Editing" : "Empty"))
+                        .foregroundColor(.secondary)
+                }
+
+                LabeledContent("Background") {
+                    Text(backgroundSummary)
+                        .foregroundColor(.secondary)
+                }
+
+                LabeledContent("Padding") {
+                    Text("\(Int(appState.padding))px")
+                        .foregroundColor(.secondary)
+                }
+
+                if appState.hasScreenshot {
+                    LabeledContent("Annotations") {
+                        Text("\(appState.annotations.count)")
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
+    private var backgroundSummary: String {
+        switch appState.backgroundType {
+        case .color:
+            return appState.selectedGradient.name
+        case .none:
+            return "None"
+        case .image:
+            return appState.backgroundImage == nil ? "Image" : "Custom image"
+        }
+    }
+}
+
+private struct DesktopAnnotationInspectorCard: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        DesktopInspectorCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Annotation")
+                        .font(.headline)
+                    Spacer()
+                    Label(appState.selectedAnnotationTool.title, systemImage: appState.selectedAnnotationTool.icon)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                ToolSettingsSection()
+
+                Divider()
+
+                AnnotationsListSection()
+            }
+        }
+    }
+}
+
+private struct DesktopInspectorCard<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            content()
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.secondary.opacity(0.07))
+        )
     }
 }
 #else
@@ -343,6 +654,286 @@ private struct DesktopEditorScreen: View {
     }
 }
 #endif
+
+private struct WorkspaceCard<Content: View>: View {
+    let title: String
+    let subtitle: String
+    let density: WorkspaceDensity
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: density.cardSpacing) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: density.titleSize, weight: .semibold))
+                Text(subtitle)
+                    .font(.system(size: density.subtitleSize))
+                    .foregroundColor(.secondary)
+            }
+
+            content()
+        }
+        .padding(density.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.secondary.opacity(0.07))
+        )
+    }
+}
+
+private struct CompactBackgroundPalette: View {
+    @EnvironmentObject var appState: AppState
+    let density: WorkspaceDensity
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: density.gridSpacing) {
+            Text(currentBackgroundLabel)
+                .font(.system(size: density.subtitleSize, weight: .medium))
+                .foregroundColor(.secondary)
+
+            LazyVGrid(
+                columns: Array(
+                    repeating: GridItem(.flexible(minimum: density.swatchSize, maximum: density.swatchSize + 6), spacing: density.gridSpacing),
+                    count: density.swatchColumns
+                ),
+                spacing: density.gridSpacing
+            ) {
+                ForEach(GradientPreset.presets) { preset in
+                    compactSwatch(
+                        isSelected: appState.backgroundType == .color && appState.selectedGradient.id == preset.id,
+                        accessibilityLabel: preset.name
+                    ) {
+                        LinearGradient(
+                            colors: preset.colors,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    } action: {
+                        selectPreset(preset)
+                    }
+                }
+
+                compactSwatch(
+                    isSelected: appState.backgroundType == .none,
+                    accessibilityLabel: "无背景"
+                ) {
+                    CheckerboardView()
+                } action: {
+                    selectNoneBackground()
+                }
+
+                compactSwatch(
+                    isSelected: appState.backgroundType == .image && appState.backgroundImage != nil,
+                    accessibilityLabel: "背景图片"
+                ) {
+                    if let image = appState.backgroundImage {
+                        Image(platformImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        Color.gray.opacity(0.18)
+                            .overlay(
+                                Image(systemName: "photo")
+                                    .font(.system(size: density == .phone ? 10 : 12, weight: .semibold))
+                                    .foregroundColor(.secondary)
+                            )
+                    }
+                } action: {
+                    appState.requestBackgroundImageImport()
+                }
+            }
+        }
+    }
+
+    private var currentBackgroundLabel: String {
+        switch appState.backgroundType {
+        case .color:
+            return "当前：\(appState.selectedGradient.name)"
+        case .none:
+            return "当前：None"
+        case .image:
+            return appState.backgroundImage == nil ? "当前：Image" : "当前：背景图片"
+        }
+    }
+
+    @ViewBuilder
+    private func compactSwatch<Content: View>(
+        isSelected: Bool,
+        accessibilityLabel: String,
+        @ViewBuilder content: () -> Content,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            content()
+                .frame(width: density.swatchSize, height: density.swatchSize)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.22), lineWidth: isSelected ? 1.5 : 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private func selectPreset(_ preset: GradientPreset) {
+        withAnimation(.easeInOut(duration: 0.15)) {
+            appState.backgroundType = .color
+            appState.selectedGradient = preset
+            appState.backgroundImage = nil
+            appState.useCustomGradient = false
+        }
+    }
+
+    private func selectNoneBackground() {
+        withAnimation(.easeInOut(duration: 0.15)) {
+            appState.backgroundType = .none
+            appState.backgroundImage = nil
+            appState.useCustomGradient = false
+        }
+    }
+}
+
+private struct CompactAdjustmentsSection: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        VStack(spacing: 6) {
+            CompactInlineSliderRow(title: "Padding", value: $appState.padding, range: 0...200, unit: "px")
+            CompactInlineSliderRow(title: "Rounded", value: $appState.cornerRadius, range: 0...40, unit: "px")
+            CompactInlineSliderRow(title: "Blur", value: $appState.blurAmount, range: 0...100, unit: "%")
+        }
+    }
+}
+
+private struct CompactOutputSection: View {
+    @EnvironmentObject var appState: AppState
+    @Binding var exportFormat: ImageFormat
+    let density: WorkspaceDensity
+    @State private var isExporting = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: density.cardSpacing) {
+            HStack(spacing: 6) {
+                Text("比例")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(.secondary)
+                    .frame(width: 28, alignment: .leading)
+
+                CompactMenuControl(title: appState.exportAspectRatio.rawValue, width: density.menuWidth) {
+                    ForEach(ExportAspectRatio.allCases, id: \.self) { ratio in
+                        Button(ratio.rawValue) {
+                            appState.exportAspectRatio = ratio
+                        }
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            if appState.exportAspectRatio == .custom {
+                HStack(spacing: 5) {
+                    CompactStepper(value: $appState.customAspectRatioWidth, title: "W")
+                    CompactStepper(value: $appState.customAspectRatioHeight, title: "H")
+                }
+            }
+
+            HStack(spacing: 6) {
+                Text("格式")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(.secondary)
+                    .frame(width: 28, alignment: .leading)
+
+                CompactMenuControl(title: exportFormat.rawValue, width: density == .phone ? 62 : 66) {
+                    ForEach(ImageFormat.allCases, id: \.self) { format in
+                        Button(format.rawValue) {
+                            exportFormat = format
+                        }
+                    }
+                }
+
+                CompactClipboardToggle()
+
+                exportButton
+
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private var exportButton: some View {
+        Button(action: export) {
+            HStack(spacing: 4) {
+                if isExporting {
+                    ProgressView()
+                        .scaleEffect(0.55)
+                } else {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+
+                Text("导出")
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, density == .phone ? 7 : 9)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.accentColor)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(!appState.hasScreenshot || isExporting)
+        .opacity((!appState.hasScreenshot || isExporting) ? 0.55 : 1)
+    }
+
+    private func export() {
+        isExporting = true
+        appState.exportCurrent(format: exportFormat, copyToClipboard: appState.autoCopyToClipboard)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            isExporting = false
+        }
+    }
+}
+
+private struct CompactClipboardToggle: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        Button {
+            appState.autoCopyToClipboard.toggle()
+        } label: {
+            Image(systemName: appState.autoCopyToClipboard ? "doc.on.clipboard.fill" : "doc.on.clipboard")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundColor(appState.autoCopyToClipboard ? .accentColor : .secondary)
+                .frame(width: 24, height: 22)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(appState.autoCopyToClipboard ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.08))
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(appState.autoCopyToClipboard ? "关闭自动拷贝" : "开启自动拷贝")
+    }
+}
+
+private struct StatusChip: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundColor(.accentColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.accentColor.opacity(0.12))
+            )
+    }
+}
 
 #Preview {
     ContentView()

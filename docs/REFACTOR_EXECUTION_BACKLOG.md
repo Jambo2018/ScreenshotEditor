@@ -13,11 +13,11 @@
 
 ## Phase 1 — Information architecture redesign
 ### Tasks
-- [ ] Define canonical app states: empty / editing / output
-- [ ] Define action ownership: import / capture / export / share
-- [ ] Define per-platform layout rules for macOS / iPad / iPhone
-- [ ] Create new root screens for desktop/tablet/phone
-- [ ] Remove legacy page composition assumptions from `ContentView`
+- [x] Define canonical app states: empty / editing / output
+- [x] Define action ownership: import / capture / export / share
+- [x] Define per-platform layout rules for macOS / iPad / iPhone
+- [x] Create new root screens for desktop/tablet/phone
+- [x] Remove legacy page composition assumptions from `ContentView`
 
 ### Exit criteria
 - Three platform shells exist even if internals are temporary
@@ -25,13 +25,13 @@
 
 ## Phase 2 — State and service split
 ### Tasks
-- [ ] Introduce `EditorDocument`
-- [ ] Introduce `CanvasStyleState`
-- [ ] Introduce `ExportState`
-- [ ] Introduce `ImportCaptureState`
-- [ ] Introduce `AppShellState`
+- [x] Introduce `EditorDocument`
+- [x] Introduce `CanvasStyleState`
+- [x] Introduce `ExportState`
+- [x] Introduce `ImportCaptureState`
+- [x] Introduce `AppShellState`
 - [ ] Move import/capture/share logic behind platform services
-- [ ] Reduce `AppState` to a composition root or remove it entirely
+- [x] Reduce `AppState` to a composition root or remove it entirely
 
 ### Exit criteria
 - No single state object owns unrelated platform + UI + document concerns
@@ -39,11 +39,11 @@
 
 ## Phase 3 — Rebuild the editor screens
 ### Tasks
-- [ ] Rebuild macOS screen around preview + fixed inspector
-- [ ] Rebuild iPad screen around preview-first adaptive split
-- [ ] Rebuild iPhone screen as full-screen editor with phone-native tool areas
-- [ ] Unify empty-state and editing-state transitions
-- [ ] Rework action bars and toolbars around the new shell structure
+- [x] Rebuild macOS screen around preview + fixed inspector
+- [x] Rebuild iPad screen around preview-first adaptive split
+- [x] Rebuild iPhone screen as full-screen editor with phone-native tool areas
+- [x] Unify empty-state and editing-state transitions
+- [x] Rework action bars and toolbars around the new shell structure
 
 ### Exit criteria
 - iPhone no longer looks like compressed desktop UI

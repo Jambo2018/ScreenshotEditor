@@ -298,7 +298,7 @@ private struct InlineCompactControlPanel: View {
     }
 }
 
-private struct CompactInlineSliderRow: View {
+struct CompactInlineSliderRow: View {
     let title: String
     @Binding var value: Double
     let range: ClosedRange<Double>
@@ -323,7 +323,7 @@ private struct CompactInlineSliderRow: View {
     }
 }
 
-private struct CompactInlineSlider: View {
+struct CompactInlineSlider: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
 
@@ -374,7 +374,7 @@ private struct CompactInlineSlider: View {
     }
 }
 
-private struct CompactMenuControl<MenuContent: View>: View {
+struct CompactMenuControl<MenuContent: View>: View {
     let title: String
     let width: CGFloat
     @ViewBuilder let content: () -> MenuContent
@@ -401,7 +401,7 @@ private struct CompactMenuControl<MenuContent: View>: View {
     }
 }
 
-private struct CompactStepper: View {
+struct CompactStepper: View {
     @Binding var value: Double
     let title: String
 
@@ -561,7 +561,7 @@ private struct SwatchCard<Preview: View>: View {
     }
 }
 
-private struct CheckerboardView: View {
+struct CheckerboardView: View {
     var body: some View {
         Canvas { context, size in
             let tileSize: CGFloat = 8
