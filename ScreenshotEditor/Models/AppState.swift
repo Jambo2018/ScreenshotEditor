@@ -8,6 +8,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import CoreImage
+import Combine
 
 #if os(macOS)
 import AppKit
@@ -15,52 +16,10 @@ import AppKit
 import UIKit
 #endif
 
-class AppState: ObservableObject {
-    // MARK: - Published Properties
-
+final class EditorDocumentState: ObservableObject {
     @Published var screenshots: [Screenshot] = []
     @Published var selectedScreenshotId: UUID?
-    @Published var selectedScreenshotIds: Set<UUID> = [] // For batch selection
-    @Published var isExporting: Bool = false
-    @Published var isBatchExporting: Bool = false
-    @Published var errorMessage: String?
-    @Published var isCapturing: Bool = false
-
-    // Screen capture
-    #if os(macOS)
-    private var hotKeyMonitor: GlobalHotKeyMonitor?
-    private var captureOverlayWindow: CaptureOverlayWindow?
-    #endif
-
-    // Background settings
-    @Published var backgroundType: BackgroundType = .color
-    @Published var selectedGradient: GradientPreset = .cool
-    @Published var useCustomGradient: Bool = false
-    @Published var customGradientStartColor: Color = .blue
-    @Published var customGradientEndColor: Color = .mint
-    @Published var useSecondCustomGradientColor: Bool = false
-    @Published var backgroundImage: PlatformImage?
-    @Published var blurAmount: Double = 0
-    @Published var padding: Double = 40
-    @Published var cornerRadius: Double = 12
-
-    // Decoration settings
-    @Published var showShadow: Bool = false
-    @Published var showBorder: Bool = false
-    @Published var deviceFrame: DeviceFrame = .none
-    @Published var exportAspectRatio: ExportAspectRatio = .original
-    @Published var customAspectRatioWidth: Double = 4
-    @Published var customAspectRatioHeight: Double = 5
-
-    // Export settings
-    @Published var autoCopyToClipboard: Bool = true
-    @Published var isImportPickerPresented = false
-    @Published var isBackgroundImagePickerPresented = false
-    @Published var isPhotoPickerPresented = false
-    @Published var shareSheetFile: ShareSheetFile?
-    @Published var isCaptureGuidePresented = false
-    
-    // Annotation tools
+    @Published var selectedScreenshotIds: Set<UUID> = []
     @Published var annotations: [Annotation] = []
     @Published var selectedAnnotationId: UUID?
     @Published var isAddingText = false
@@ -71,8 +30,65 @@ class AppState: ObservableObject {
     @Published var currentStrokeWidth: Double = 2
     @Published var currentBrushSize: Double = 20
     @Published var currentBrushOpacity: Double = 0.5
-    @Published var isAnnotationPanelVisible: Bool = true
-    @Published var isColorPickingMode: Bool = false
+}
+
+final class CanvasStyleState: ObservableObject {
+    @Published var backgroundType: BackgroundType = .color
+    @Published var selectedGradient: GradientPreset = .cool
+    @Published var useCustomGradient = false
+    @Published var customGradientStartColor: Color = .blue
+    @Published var customGradientEndColor: Color = .mint
+    @Published var useSecondCustomGradientColor = false
+    @Published var backgroundImage: PlatformImage?
+    @Published var blurAmount: Double = 0
+    @Published var padding: Double = 40
+    @Published var cornerRadius: Double = 12
+    @Published var showShadow = false
+    @Published var showBorder = false
+    @Published var deviceFrame: DeviceFrame = .none
+    @Published var exportAspectRatio: ExportAspectRatio = .original
+    @Published var customAspectRatioWidth: Double = 4
+    @Published var customAspectRatioHeight: Double = 5
+}
+
+final class ExportWorkflowState: ObservableObject {
+    @Published var isExporting = false
+    @Published var isBatchExporting = false
+    @Published var autoCopyToClipboard = true
+    @Published var shareSheetFile: ShareSheetFile?
+}
+
+final class ImportCaptureState: ObservableObject {
+    @Published var isCapturing = false
+    @Published var isImportPickerPresented = false
+    @Published var isBackgroundImagePickerPresented = false
+    @Published var isPhotoPickerPresented = false
+    @Published var isCaptureGuidePresented = false
+}
+
+final class EditorShellState: ObservableObject {
+    @Published var errorMessage: String?
+    @Published var isAnnotationPanelVisible = true
+    @Published var isColorPickingMode = false
+}
+
+class AppState: ObservableObject {
+    // MARK: - Published Properties
+
+    let objectWillChange = ObservableObjectPublisher()
+
+    let document = EditorDocumentState()
+    let canvas = CanvasStyleState()
+    let export = ExportWorkflowState()
+    let intake = ImportCaptureState()
+    let shell = EditorShellState()
+    private var cancellables = Set<AnyCancellable>()
+
+    // Screen capture
+    #if os(macOS)
+    private var hotKeyMonitor: GlobalHotKeyMonitor?
+    private var captureOverlayWindow: CaptureOverlayWindow?
+    #endif
 
     // MARK: - Computed Properties
 
@@ -111,11 +127,239 @@ class AppState: ObservableObject {
         }
     }
 
+    var screenshots: [Screenshot] {
+        get { document.screenshots }
+        set { document.screenshots = newValue }
+    }
+
+    var selectedScreenshotId: UUID? {
+        get { document.selectedScreenshotId }
+        set { document.selectedScreenshotId = newValue }
+    }
+
+    var selectedScreenshotIds: Set<UUID> {
+        get { document.selectedScreenshotIds }
+        set { document.selectedScreenshotIds = newValue }
+    }
+
+    var annotations: [Annotation] {
+        get { document.annotations }
+        set { document.annotations = newValue }
+    }
+
+    var selectedAnnotationId: UUID? {
+        get { document.selectedAnnotationId }
+        set { document.selectedAnnotationId = newValue }
+    }
+
+    var isAddingText: Bool {
+        get { document.isAddingText }
+        set { document.isAddingText = newValue }
+    }
+
+    var currentTextColor: Color {
+        get { document.currentTextColor }
+        set { document.currentTextColor = newValue }
+    }
+
+    var currentTextSize: Double {
+        get { document.currentTextSize }
+        set { document.currentTextSize = newValue }
+    }
+
+    var selectedAnnotationTool: AnnotationTool {
+        get { document.selectedAnnotationTool }
+        set { document.selectedAnnotationTool = newValue }
+    }
+
+    var currentShapeColor: Color {
+        get { document.currentShapeColor }
+        set { document.currentShapeColor = newValue }
+    }
+
+    var currentStrokeWidth: Double {
+        get { document.currentStrokeWidth }
+        set { document.currentStrokeWidth = newValue }
+    }
+
+    var currentBrushSize: Double {
+        get { document.currentBrushSize }
+        set { document.currentBrushSize = newValue }
+    }
+
+    var currentBrushOpacity: Double {
+        get { document.currentBrushOpacity }
+        set { document.currentBrushOpacity = newValue }
+    }
+
+    var backgroundType: BackgroundType {
+        get { canvas.backgroundType }
+        set { canvas.backgroundType = newValue }
+    }
+
+    var selectedGradient: GradientPreset {
+        get { canvas.selectedGradient }
+        set { canvas.selectedGradient = newValue }
+    }
+
+    var useCustomGradient: Bool {
+        get { canvas.useCustomGradient }
+        set { canvas.useCustomGradient = newValue }
+    }
+
+    var customGradientStartColor: Color {
+        get { canvas.customGradientStartColor }
+        set { canvas.customGradientStartColor = newValue }
+    }
+
+    var customGradientEndColor: Color {
+        get { canvas.customGradientEndColor }
+        set { canvas.customGradientEndColor = newValue }
+    }
+
+    var useSecondCustomGradientColor: Bool {
+        get { canvas.useSecondCustomGradientColor }
+        set { canvas.useSecondCustomGradientColor = newValue }
+    }
+
+    var backgroundImage: PlatformImage? {
+        get { canvas.backgroundImage }
+        set { canvas.backgroundImage = newValue }
+    }
+
+    var blurAmount: Double {
+        get { canvas.blurAmount }
+        set { canvas.blurAmount = newValue }
+    }
+
+    var padding: Double {
+        get { canvas.padding }
+        set { canvas.padding = newValue }
+    }
+
+    var cornerRadius: Double {
+        get { canvas.cornerRadius }
+        set { canvas.cornerRadius = newValue }
+    }
+
+    var showShadow: Bool {
+        get { canvas.showShadow }
+        set { canvas.showShadow = newValue }
+    }
+
+    var showBorder: Bool {
+        get { canvas.showBorder }
+        set { canvas.showBorder = newValue }
+    }
+
+    var deviceFrame: DeviceFrame {
+        get { canvas.deviceFrame }
+        set { canvas.deviceFrame = newValue }
+    }
+
+    var exportAspectRatio: ExportAspectRatio {
+        get { canvas.exportAspectRatio }
+        set { canvas.exportAspectRatio = newValue }
+    }
+
+    var customAspectRatioWidth: Double {
+        get { canvas.customAspectRatioWidth }
+        set { canvas.customAspectRatioWidth = newValue }
+    }
+
+    var customAspectRatioHeight: Double {
+        get { canvas.customAspectRatioHeight }
+        set { canvas.customAspectRatioHeight = newValue }
+    }
+
+    var isExporting: Bool {
+        get { export.isExporting }
+        set { export.isExporting = newValue }
+    }
+
+    var isBatchExporting: Bool {
+        get { export.isBatchExporting }
+        set { export.isBatchExporting = newValue }
+    }
+
+    var autoCopyToClipboard: Bool {
+        get { export.autoCopyToClipboard }
+        set { export.autoCopyToClipboard = newValue }
+    }
+
+    var shareSheetFile: ShareSheetFile? {
+        get { export.shareSheetFile }
+        set { export.shareSheetFile = newValue }
+    }
+
+    var isCapturing: Bool {
+        get { intake.isCapturing }
+        set { intake.isCapturing = newValue }
+    }
+
+    var isImportPickerPresented: Bool {
+        get { intake.isImportPickerPresented }
+        set { intake.isImportPickerPresented = newValue }
+    }
+
+    var isBackgroundImagePickerPresented: Bool {
+        get { intake.isBackgroundImagePickerPresented }
+        set { intake.isBackgroundImagePickerPresented = newValue }
+    }
+
+    var isPhotoPickerPresented: Bool {
+        get { intake.isPhotoPickerPresented }
+        set { intake.isPhotoPickerPresented = newValue }
+    }
+
+    var isCaptureGuidePresented: Bool {
+        get { intake.isCaptureGuidePresented }
+        set { intake.isCaptureGuidePresented = newValue }
+    }
+
+    var errorMessage: String? {
+        get { shell.errorMessage }
+        set { shell.errorMessage = newValue }
+    }
+
+    var isAnnotationPanelVisible: Bool {
+        get { shell.isAnnotationPanelVisible }
+        set { shell.isAnnotationPanelVisible = newValue }
+    }
+
+    var isColorPickingMode: Bool {
+        get { shell.isColorPickingMode }
+        set { shell.isColorPickingMode = newValue }
+    }
+
     // MARK: - Initialization
 
     init() {
+        bindChildState()
         loadFromiCloud()
         setupHotKey()
+    }
+
+    private func bindChildState() {
+        document.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+
+        canvas.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+
+        export.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+
+        intake.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+
+        shell.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
     }
 
     // MARK: - Screen Capture Setup

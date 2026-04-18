@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.16.0] - 2026-04-18
+
+### Added
+- Added a state-model document that records the new document/style/export/intake/shell split and the transitional rule for keeping `AppState` as the composition root.
+
+### Changed
+- Split the previous `AppState` monolith into focused child state domains for editor document data, canvas styling, export workflow, import/capture flow, and shell-level UI flags.
+- Forwarded child-state changes through `AppState` so the existing views can keep using the same environment object while the refactor continues incrementally.
+
 ## [0.1.15.0] - 2026-04-18
 
 ### Added
