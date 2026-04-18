@@ -227,7 +227,7 @@ private struct EditorCanvasRegion: View {
         CanvasView(showsEditingBottomBar: false)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(deviceClass.canvasPadding)
-            .background(Color.editorPanelBackground)
+            .background(canvasBackground)
     }
 
     private var deviceClass: EditorDeviceClass {
@@ -240,6 +240,10 @@ private struct EditorCanvasRegion: View {
             return .phone
         }
     }
+
+    private var canvasBackground: Color {
+        deviceClass == .desktop ? .editorPanelBackground : .editorBackground
+    }
 }
 
 #if os(iOS)
@@ -247,23 +251,18 @@ private struct PhoneEditorScreen: View {
     let sceneState: EditorSceneState
 
     var body: some View {
-        ZStack {
-            Color.editorPanelBackground.ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                EditorTopBar(sceneState: sceneState, layout: .phone)
-                Divider()
-                EditorCanvasRegion(shell: .phone)
-
+        EditorCanvasRegion(shell: .phone)
+            .background(Color.editorBackground.ignoresSafeArea())
+            .safeAreaInset(edge: .top, spacing: 0) {
+                MobileTopInset(sceneState: sceneState, layout: .phone)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
                 if sceneState != .empty {
-                    Divider()
-                    PhoneEditingWorkspace()
-                    Divider()
-                    EditingBottomBar(layoutStyle: .phone)
+                    MobileBottomDock(deviceClass: .phone)
                 }
             }
-        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea(.container, edges: [.top, .bottom])
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }
@@ -272,24 +271,53 @@ private struct TabletEditorScreen: View {
     let sceneState: EditorSceneState
 
     var body: some View {
-        ZStack {
-            Color.editorPanelBackground.ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                EditorTopBar(sceneState: sceneState, layout: .tablet)
-                Divider()
-                EditorCanvasRegion(shell: .tablet)
-
+        EditorCanvasRegion(shell: .tablet)
+            .background(Color.editorBackground.ignoresSafeArea())
+            .safeAreaInset(edge: .top, spacing: 0) {
+                MobileTopInset(sceneState: sceneState, layout: .tablet)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
                 if sceneState != .empty {
-                    Divider()
-                    TabletEditingWorkspace()
-                    Divider()
-                    EditingBottomBar(layoutStyle: .tablet)
+                    MobileBottomDock(deviceClass: .tablet)
                 }
             }
-        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea(.container, edges: [.top, .bottom])
         .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+}
+
+private struct MobileTopInset: View {
+    let sceneState: EditorSceneState
+    let layout: MobileEditorLayout
+
+    var body: some View {
+        VStack(spacing: 0) {
+            EditorTopBar(sceneState: sceneState, layout: layout)
+            Divider()
+        }
+        .background(Color.editorPanelBackground)
+    }
+}
+
+private struct MobileBottomDock: View {
+    let deviceClass: EditorDeviceClass
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Divider()
+
+            if deviceClass == .phone {
+                PhoneEditingWorkspace()
+                Divider()
+                EditingBottomBar(layoutStyle: .phone)
+            } else {
+                TabletEditingWorkspace()
+                Divider()
+                EditingBottomBar(layoutStyle: .tablet)
+            }
+        }
+        .background(Color.editorPanelBackground)
     }
 }
 
@@ -356,71 +384,25 @@ private struct EditorTopBar: View {
 }
 
 private struct PhoneEditingWorkspace: View {
-    @State private var exportFormat: ImageFormat = .png
-
     var body: some View {
-        VStack(spacing: 8) {
-            WorkspaceCard(
-                title: "画布",
-                subtitle: "背景、留白、圆角、模糊",
-                density: .phone
-            ) {
-                VStack(spacing: 8) {
-                    CompactBackgroundPalette(density: .phone)
-                    Divider()
-                    CompactAdjustmentsSection()
-                }
-            }
-
-            WorkspaceCard(
-                title: "输出",
-                subtitle: "比例、格式、导出",
-                density: .phone
-            ) {
-                CompactOutputSection(exportFormat: $exportFormat, density: .phone)
-            }
-        }
-        .padding(.horizontal, EditorDeviceClass.phone.workspaceHorizontalPadding)
-        .padding(.vertical, EditorDeviceClass.phone.workspaceVerticalPadding)
-        .background(Color.editorPanelBackground)
+        MobileEditingWorkspacePanel(deviceClass: .phone)
     }
 }
 
 private struct TabletEditingWorkspace: View {
-    @State private var exportFormat: ImageFormat = .png
+    var body: some View {
+        MobileEditingWorkspacePanel(deviceClass: .tablet)
+    }
+}
+
+private struct MobileEditingWorkspacePanel: View {
+    let deviceClass: EditorDeviceClass
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            WorkspaceCard(
-                title: "背景",
-                subtitle: "渐变、透明、图片背景",
-                density: .tablet
-            ) {
-                CompactBackgroundPalette(density: .tablet)
-            }
-            .frame(maxWidth: .infinity, alignment: .top)
-
-            WorkspaceCard(
-                title: "调整",
-                subtitle: "留白、圆角、模糊",
-                density: .tablet
-            ) {
-                CompactAdjustmentsSection()
-            }
-            .frame(width: EditorDeviceClass.tablet.workspaceSectionWidth, alignment: .top)
-
-            WorkspaceCard(
-                title: "输出",
-                subtitle: "比例、格式、导出",
-                density: .tablet
-            ) {
-                CompactOutputSection(exportFormat: $exportFormat, density: .tablet)
-            }
-            .frame(width: 250, alignment: .top)
-        }
-        .padding(.horizontal, EditorDeviceClass.tablet.workspaceHorizontalPadding)
-        .padding(.vertical, EditorDeviceClass.tablet.workspaceVerticalPadding)
-        .background(Color.editorPanelBackground)
+        ControlPanelView(layoutStyle: .inline)
+            .padding(.horizontal, deviceClass == .phone ? 6 : 10)
+            .padding(.vertical, deviceClass == .phone ? 4 : 6)
+            .background(Color.editorPanelBackground)
     }
 }
 #endif

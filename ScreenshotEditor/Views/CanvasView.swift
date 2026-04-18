@@ -11,6 +11,7 @@ import UniformTypeIdentifiers
 struct CanvasView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     var showsEditingBottomBar: Bool = true
 
     var body: some View {
@@ -18,7 +19,7 @@ struct CanvasView: View {
             Group {
                 if let screenshot = appState.selectedScreenshot,
                    let image = screenshot.image {
-                    previewCanvas(for: image)
+                    previewCanvas(for: screenshot.id, sourceImage: image)
                 } else {
                     WelcomeView()
                 }
@@ -41,10 +42,7 @@ struct CanvasView: View {
     }
 
     @ViewBuilder
-    private func previewCanvas(for sourceImage: PlatformImage) -> some View {
-        let previewImage = renderedPreviewImage(for: sourceImage) ?? sourceImage
-        let previewSize = previewImage.pixelSize
-        let previewAspectRatio = max(previewSize.width, 1) / max(previewSize.height, 1)
+    private func previewCanvas(for screenshotID: UUID, sourceImage: PlatformImage) -> some View {
         let previewPadding: CGFloat = {
             #if os(iOS)
             return (horizontalSizeClass == .compact ? EditorDeviceClass.phone : EditorDeviceClass.tablet).previewPadding
@@ -53,40 +51,63 @@ struct CanvasView: View {
             #endif
         }()
 
-        ZStack {
-            Image(platformImage: previewImage)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .onDrag {
-                    itemProviderForImage(previewImage)
-                }
-
-            AnnotationLayerView(sourceImage: previewImage)
-                .environmentObject(appState)
-        }
-        .aspectRatio(previewAspectRatio, contentMode: .fit)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(previewPadding)
+        PreviewCanvasSurface(
+            screenshotID: screenshotID,
+            sourceImage: sourceImage,
+            configuration: PreviewRenderConfiguration(
+                backgroundType: appState.backgroundType,
+                gradientColors: appState.activeGradientColors,
+                backgroundImage: appState.backgroundImage,
+                blurAmount: appState.blurAmount,
+                padding: appState.padding,
+                cornerRadius: appState.cornerRadius,
+                deviceFrame: appState.deviceFrame,
+                aspectRatio: appState.exportAspectRatio,
+                customAspectRatio: CGSize(
+                    width: appState.customAspectRatioWidth,
+                    height: appState.customAspectRatioHeight
+                )
+            ),
+            renderKey: previewRenderKey(for: screenshotID),
+            previewPadding: previewPadding
+        )
+        .environmentObject(appState)
     }
 
-    private func renderedPreviewImage(for sourceImage: PlatformImage) -> PlatformImage? {
-        try? ImageExporter.renderImage(
-            sourceImage: sourceImage,
-            backgroundType: appState.backgroundType,
-            gradientColors: appState.activeGradientColors,
-            backgroundImage: appState.backgroundImage,
-            blurAmount: appState.blurAmount,
-            padding: appState.padding,
-            cornerRadius: appState.cornerRadius,
-            showShadow: false,
-            showBorder: false,
-            deviceFrame: appState.deviceFrame,
-            aspectRatio: appState.exportAspectRatio,
-            customAspectRatio: CGSize(
-                width: appState.customAspectRatioWidth,
-                height: appState.customAspectRatioHeight
-            )
-        )
+    private func previewRenderKey(for screenshotID: UUID) -> String {
+        let gradientSignature = appState.activeGradientColors.map(colorSignature).joined(separator: "|")
+        return [
+            screenshotID.uuidString,
+            appState.backgroundType.rawValue,
+            gradientSignature,
+            imageSignature(appState.backgroundImage),
+            formatValue(appState.blurAmount),
+            formatValue(appState.padding),
+            formatValue(appState.cornerRadius),
+            appState.deviceFrame.rawValue,
+            appState.exportAspectRatio.rawValue,
+            formatValue(appState.customAspectRatioWidth),
+            formatValue(appState.customAspectRatioHeight)
+        ].joined(separator: "#")
+    }
+
+    private func colorSignature(_ color: Color) -> String {
+        let cgColor = PlatformColor.from(color).cgColor
+        let components = cgColor.components?.map { formatValue($0) }.joined(separator: ",") ?? "none"
+        return "\(cgColor.colorSpace?.name as String? ?? "unknown"):\(components)"
+    }
+
+    private func imageSignature(_ image: PlatformImage?) -> String {
+        guard let image else { return "nil" }
+        return "\(ObjectIdentifier(image).hashValue)-\(Int(image.pixelSize.width))x\(Int(image.pixelSize.height))"
+    }
+
+    private func formatValue(_ value: CGFloat) -> String {
+        String(format: "%.3f", value)
+    }
+
+    private func formatValue(_ value: Double) -> String {
+        String(format: "%.3f", value)
     }
 
     private func itemProviderForImage(_ image: PlatformImage) -> NSItemProvider {
@@ -117,6 +138,197 @@ struct CanvasView: View {
             } else if let url = item as? URL {
                 appState.loadImage(from: url)
             }
+        }
+    }
+}
+
+
+private struct PreviewRenderConfiguration {
+    let backgroundType: BackgroundType
+    let gradientColors: [Color]
+    let backgroundImage: PlatformImage?
+    let blurAmount: Double
+    let padding: Double
+    let cornerRadius: Double
+    let deviceFrame: DeviceFrame
+    let aspectRatio: ExportAspectRatio
+    let customAspectRatio: CGSize
+}
+
+private struct PreviewCanvasSurface: View {
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.displayScale) private var displayScale
+
+    let screenshotID: UUID
+    let sourceImage: PlatformImage
+    let configuration: PreviewRenderConfiguration
+    let renderKey: String
+    let previewPadding: CGFloat
+
+    @State private var renderedPreviewImage: PlatformImage?
+
+    private var displayedImage: PlatformImage {
+        renderedPreviewImage ?? sourceImage
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let availableSize = availablePreviewSize(in: proxy.size)
+            let previewSize = displayedImage.pixelSize
+            let previewAspectRatio = max(previewSize.width, 1) / max(previewSize.height, 1)
+
+            ZStack {
+                Image(platformImage: displayedImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .onDrag {
+                        itemProviderForImage(displayedImage)
+                    }
+
+                AnnotationLayerView(sourceImage: displayedImage)
+                    .environmentObject(appState)
+            }
+            .aspectRatio(previewAspectRatio, contentMode: .fit)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(previewPadding)
+            .task(id: screenshotID) {
+                renderedPreviewImage = sourceImage
+            }
+            .task(id: renderTaskKey(for: availableSize)) {
+                await renderPreview(in: availableSize)
+            }
+        }
+    }
+
+    private func itemProviderForImage(_ image: PlatformImage) -> NSItemProvider {
+        guard let pngData = image.pngRepresentation() else {
+            return NSItemProvider()
+        }
+
+        return NSItemProvider(item: pngData as NSSecureCoding, typeIdentifier: UTType.png.identifier)
+    }
+
+    private func renderTaskKey(for availableSize: CGSize) -> String {
+        let width = Int((availableSize.width * displayScale).rounded())
+        let height = Int((availableSize.height * displayScale).rounded())
+        return "\(renderKey)#\(width)x\(height)"
+    }
+
+    private func availablePreviewSize(in containerSize: CGSize) -> CGSize {
+        CGSize(
+            width: max(containerSize.width - (previewPadding * 2), 1),
+            height: max(containerSize.height - (previewPadding * 2), 1)
+        )
+    }
+
+    private func renderPreview(in availableSize: CGSize) async {
+        let sourceImage = sourceImage
+        let configuration = configuration
+        let targetPixelSize = CGSize(
+            width: max(availableSize.width * displayScale, 1),
+            height: max(availableSize.height * displayScale, 1)
+        )
+
+        do {
+            try await Task.sleep(nanoseconds: 60_000_000)
+        } catch {
+            return
+        }
+
+        if Task.isCancelled { return }
+
+        let scaledInputs = scaledPreviewInputs(for: targetPixelSize)
+
+        let rendered = await Task.detached(priority: .utility) {
+            try? ImageExporter.renderImage(
+                sourceImage: scaledInputs.sourceImage,
+                backgroundType: configuration.backgroundType,
+                gradientColors: configuration.gradientColors,
+                backgroundImage: scaledInputs.backgroundImage,
+                blurAmount: configuration.blurAmount,
+                padding: configuration.padding * scaledInputs.scale,
+                cornerRadius: configuration.cornerRadius * scaledInputs.scale,
+                showShadow: false,
+                showBorder: false,
+                deviceFrame: configuration.deviceFrame,
+                aspectRatio: configuration.aspectRatio,
+                customAspectRatio: configuration.customAspectRatio
+            )
+        }.value
+
+        if Task.isCancelled { return }
+
+        renderedPreviewImage = rendered ?? sourceImage
+    }
+
+    private func scaledPreviewInputs(for targetPixelSize: CGSize) -> (sourceImage: PlatformImage, backgroundImage: PlatformImage?, scale: CGFloat) {
+        let sourceSize = sourceImage.pixelSize
+        let canvasSize = previewCanvasSize(for: sourceSize)
+        let scale = min(
+            targetPixelSize.width / max(canvasSize.width, 1),
+            targetPixelSize.height / max(canvasSize.height, 1),
+            1
+        )
+
+        guard scale < 0.98 else {
+            return (sourceImage, configuration.backgroundImage, 1)
+        }
+
+        let resizedSource = sourceImage.resized(
+            to: CGSize(
+                width: max(sourceSize.width * scale, 1),
+                height: max(sourceSize.height * scale, 1)
+            )
+        )
+
+        let resizedBackground = configuration.backgroundImage?.resized(
+            to: CGSize(
+                width: max(canvasSize.width * scale, 1),
+                height: max(canvasSize.height * scale, 1)
+            )
+        )
+
+        return (resizedSource, resizedBackground, scale)
+    }
+
+    private func previewCanvasSize(for sourceSize: CGSize) -> CGSize {
+        let minimumCanvasWidth = sourceSize.width + (configuration.padding * 2)
+        let minimumCanvasHeight = sourceSize.height + (configuration.padding * 2)
+
+        guard let targetRatio = resolvedAspectRatioValue() else {
+            return CGSize(width: minimumCanvasWidth, height: minimumCanvasHeight)
+        }
+
+        let minimumRatio = minimumCanvasWidth / minimumCanvasHeight
+
+        if targetRatio >= minimumRatio {
+            let canvasHeight = minimumCanvasHeight
+            return CGSize(width: canvasHeight * targetRatio, height: canvasHeight)
+        } else {
+            let canvasWidth = minimumCanvasWidth
+            return CGSize(width: canvasWidth, height: canvasWidth / targetRatio)
+        }
+    }
+
+    private func resolvedAspectRatioValue() -> CGFloat? {
+        switch configuration.aspectRatio {
+        case .original:
+            return nil
+        case .square:
+            return 1
+        case .portrait34:
+            return 3.0 / 4.0
+        case .landscape43:
+            return 4.0 / 3.0
+        case .portrait916:
+            return 9.0 / 16.0
+        case .landscape169:
+            return 16.0 / 9.0
+        case .custom:
+            guard configuration.customAspectRatio.width > 0, configuration.customAspectRatio.height > 0 else {
+                return nil
+            }
+            return configuration.customAspectRatio.width / configuration.customAspectRatio.height
         }
     }
 }
@@ -356,13 +568,10 @@ struct EditingBottomBar: View {
     }
 
     private var phoneBody: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             actionsRow
 
-            LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: toolSpacing), count: 3),
-                spacing: toolSpacing
-            ) {
+            HStack(spacing: toolSpacing) {
                 ForEach(visibleTools, id: \.self) { tool in
                     toolButton(tool)
                 }
@@ -484,36 +693,31 @@ struct EditingBottomBar: View {
                 appState.selectedAnnotationTool = tool
             }
         }) {
-            Group {
-                if resolvedLayoutStyle == .phone {
-                    HStack(spacing: 5) {
-                        Image(systemName: tool.icon)
-                            .font(.system(size: toolIconSize, weight: .semibold))
-                        Text(tool.title)
-                            .font(EditorTypography.compactLabel)
-                            .lineLimit(1)
-                    }
-                    .foregroundColor(isSelected ? .white : Color.primary.opacity(0.82))
-                    .frame(maxWidth: .infinity, minHeight: toolButtonSize)
-                    .background(
-                        RoundedRectangle(cornerRadius: toolCornerRadius, style: .continuous)
-                            .fill(isSelected ? Color.accentColor : Color.white.opacity(EditorOpacity.selectedFill))
-                    )
-                } else {
-                    Image(systemName: tool.icon)
-                        .font(.system(size: toolIconSize, weight: .semibold))
-                        .foregroundColor(isSelected ? .white : Color.primary.opacity(0.82))
-                        .frame(width: toolButtonSize, height: toolButtonSize)
-                        .background(
-                            RoundedRectangle(cornerRadius: toolCornerRadius, style: .continuous)
-                                .fill(isSelected ? Color.accentColor : Color.white.opacity(EditorOpacity.selectedFill))
-                        )
-                }
-            }
+            Image(systemName: tool.icon)
+                .font(.system(size: toolIconSize, weight: .semibold))
+                .foregroundColor(isSelected ? .white : Color.primary.opacity(0.82))
+                .frame(width: toolButtonSize, height: toolButtonSize)
+                .background(
+                    RoundedRectangle(cornerRadius: toolCornerRadius, style: .continuous)
+                        .fill(isSelected ? Color.accentColor : Color.white.opacity(EditorOpacity.selectedFill))
+                )
         }
         .buttonStyle(.plain)
         .help(tool.title)
+        .accessibilityLabel(tool.title)
         .accessibilityIdentifier("tool.\(tool.rawValue)")
+    }
+
+    private var toolIconSize: CGFloat {
+        deviceClass.toolIconSize
+    }
+
+    private var toolButtonSize: CGFloat {
+        deviceClass.toolButtonSize
+    }
+
+    private var toolCornerRadius: CGFloat {
+        deviceClass.toolCornerRadius
     }
 
     private var actionTitleSize: CGFloat {
@@ -538,18 +742,6 @@ struct EditingBottomBar: View {
 
     private var actionCornerRadius: CGFloat {
         deviceClass.actionCornerRadius
-    }
-
-    private var toolIconSize: CGFloat {
-        deviceClass.toolIconSize
-    }
-
-    private var toolButtonSize: CGFloat {
-        deviceClass.toolButtonSize
-    }
-
-    private var toolCornerRadius: CGFloat {
-        deviceClass.toolCornerRadius
     }
 }
 

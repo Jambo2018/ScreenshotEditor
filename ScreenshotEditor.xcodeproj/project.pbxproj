@@ -33,7 +33,18 @@
 		A100001C /* PinWindowManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200001C /* PinWindowManagerTests.swift */; };
 		A100001D /* VisionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200001D /* VisionServiceTests.swift */; };
 		A100001E /* ScreenshotEditorUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200001E /* ScreenshotEditorUITests.swift */; };
+		A1000020 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A2000020 /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A6000009 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A8000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A6000001;
+			remoteInfo = ScreenshotEditor;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		A2000001 /* ScreenshotEditorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotEditorApp.swift; sourceTree = "<group>"; };
@@ -64,6 +75,7 @@
 		A200001D /* VisionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionServiceTests.swift; sourceTree = "<group>"; };
 		A200001E /* ScreenshotEditorUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotEditorUITests.swift; sourceTree = "<group>"; };
 		A200001F /* ScreenshotEditorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScreenshotEditorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2000020 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		A3000001 /* ScreenshotEditor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScreenshotEditor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -98,10 +110,11 @@
 			isa = PBXGroup;
 			children = (
 				A2000001 /* ScreenshotEditorApp.swift */,
+				A2000020 /* LaunchScreen.storyboard */,
 				A5000004 /* Views */,
 				A5000005 /* Models */,
 				A5000006 /* Utilities */,
-				A5000007 /* ScreenshotEditorTests */,
+				A5000007 /* ../ScreenshotEditorTests */,
 				A200000A /* Assets.xcassets */,
 				A200000B /* Preview Content */,
 			);
@@ -112,7 +125,7 @@
 			isa = PBXGroup;
 			children = (
 				A3000001 /* ScreenshotEditor.app */,
-				A200001F /* ScreenshotEditorTests */,
+				A200001F /* ScreenshotEditorTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -156,7 +169,7 @@
 			path = Utilities;
 			sourceTree = "<group>";
 		};
-		A5000007 /* ScreenshotEditorTests */ = {
+		A5000007 /* ../ScreenshotEditorTests */ = {
 			isa = PBXGroup;
 			children = (
 				A200001A /* AppStateTests.swift */,
@@ -203,23 +216,11 @@
 			);
 			name = ScreenshotEditorTests;
 			productName = ScreenshotEditorTests;
-			productReference = A200001F /* ScreenshotEditorTests */;
+			productReference = A200001F /* ScreenshotEditorTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
-		A6000008 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = A6000001 /* ScreenshotEditor */;
-			targetProxy = A6000009 /* PBXContainerItemProxy */;
-		};
-		A6000009 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = A8000001 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = A6000001;
-			remoteInfo = ScreenshotEditor;
-		};
 /* Begin PBXProject section */
 		A8000001 /* Project object */ = {
 			isa = PBXProject;
@@ -258,6 +259,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A100000A /* Assets.xcassets in Resources */,
+				A1000020 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -310,6 +312,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A6000008 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A6000001 /* ScreenshotEditor */;
+			targetProxy = A6000009 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A9000001 /* Debug */ = {
@@ -444,9 +454,13 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
+				"EXCLUDED_SOURCE_FILE_NAMES[sdk=macosx*]" = "LaunchScreen.storyboard";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -472,9 +486,13 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
+				"EXCLUDED_SOURCE_FILE_NAMES[sdk=macosx*]" = "LaunchScreen.storyboard";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

@@ -162,12 +162,7 @@ enum EditorDeviceClass: Equatable {
         case .phone:
             return EdgeInsets()
         case .tablet:
-            return EdgeInsets(
-                top: EditorSpacing.medium,
-                leading: EditorSpacing.medium,
-                bottom: EditorSpacing.medium,
-                trailing: EditorSpacing.medium
-            )
+            return EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0)
         case .desktop:
             return EdgeInsets(
                 top: EditorSpacing.xLarge,
@@ -182,17 +177,17 @@ enum EditorDeviceClass: Equatable {
         switch self {
         case .phone:
             return EdgeInsets(
-                top: EditorSpacing.xSmall,
-                leading: EditorSpacing.medium,
-                bottom: EditorSpacing.small,
-                trailing: EditorSpacing.medium
+                top: 0,
+                leading: 6,
+                bottom: 3,
+                trailing: 6
             )
         case .tablet:
             return EdgeInsets(
-                top: EditorSpacing.small,
-                leading: EditorSpacing.xLarge,
-                bottom: EditorSpacing.medium,
-                trailing: EditorSpacing.xLarge
+                top: 2,
+                leading: EditorSpacing.small,
+                bottom: 4,
+                trailing: EditorSpacing.small
             )
         case .desktop:
             return EdgeInsets(
@@ -207,9 +202,9 @@ enum EditorDeviceClass: Equatable {
     var topBarButtonSide: CGFloat {
         switch self {
         case .phone:
-            return 28
+            return 26
         case .tablet:
-            return 30
+            return 28
         case .desktop:
             return 32
         }
@@ -229,9 +224,9 @@ enum EditorDeviceClass: Equatable {
     var workspaceVerticalPadding: CGFloat {
         switch self {
         case .phone:
-            return EditorSpacing.small
+            return 4
         case .tablet:
-            return EditorSpacing.medium
+            return 6
         case .desktop:
             return EditorSpacing.xLarge
         }
@@ -240,9 +235,9 @@ enum EditorDeviceClass: Equatable {
     var workspacePrimarySpacing: CGFloat {
         switch self {
         case .phone:
-            return EditorSpacing.small
+            return 4
         case .tablet:
-            return EditorSpacing.medium
+            return 6
         case .desktop:
             return EditorSpacing.large
         }
@@ -262,9 +257,9 @@ enum EditorDeviceClass: Equatable {
     var previewPadding: CGFloat {
         switch self {
         case .phone:
-            return EditorSpacing.xxSmall
+            return 0
         case .tablet:
-            return EditorSpacing.small
+            return 0
         case .desktop:
             return EditorSpacing.xxLarge
         }
@@ -273,9 +268,9 @@ enum EditorDeviceClass: Equatable {
     var bottomBarHorizontalPadding: CGFloat {
         switch self {
         case .phone:
-            return EditorSpacing.small
+            return 6
         case .tablet:
-            return EditorSpacing.medium
+            return EditorSpacing.small
         case .desktop:
             return EditorSpacing.xxxLarge
         }
@@ -284,9 +279,9 @@ enum EditorDeviceClass: Equatable {
     var bottomBarVerticalPadding: CGFloat {
         switch self {
         case .phone:
-            return EditorSpacing.xSmall
+            return 3
         case .tablet:
-            return 7
+            return 4
         case .desktop:
             return EditorSpacing.xLarge
         }
@@ -295,9 +290,9 @@ enum EditorDeviceClass: Equatable {
     var bottomBarActionSpacing: CGFloat {
         switch self {
         case .phone:
-            return 5
+            return 4
         case .tablet:
-            return EditorSpacing.xSmall
+            return 5
         case .desktop:
             return EditorSpacing.medium
         }
@@ -317,9 +312,9 @@ enum EditorDeviceClass: Equatable {
     var bottomBarToolSpacing: CGFloat {
         switch self {
         case .phone:
-            return 5
+            return 4
         case .tablet:
-            return EditorSpacing.xxSmall
+            return 5
         case .desktop:
             return EditorSpacing.small
         }
@@ -338,7 +333,9 @@ enum EditorDeviceClass: Equatable {
 
     var actionTitleSize: CGFloat {
         switch self {
-        case .phone, .tablet:
+        case .phone:
+            return 9
+        case .tablet:
             return 10
         case .desktop:
             return 16
@@ -347,7 +344,9 @@ enum EditorDeviceClass: Equatable {
 
     var actionIconSize: CGFloat {
         switch self {
-        case .phone, .tablet:
+        case .phone:
+            return 9
+        case .tablet:
             return 10
         case .desktop:
             return 16
@@ -356,7 +355,9 @@ enum EditorDeviceClass: Equatable {
 
     var buttonIconSpacing: CGFloat {
         switch self {
-        case .phone, .tablet:
+        case .phone:
+            return 2
+        case .tablet:
             return 3
         case .desktop:
             return EditorSpacing.small
@@ -365,7 +366,9 @@ enum EditorDeviceClass: Equatable {
 
     var actionHorizontalPadding: CGFloat {
         switch self {
-        case .phone, .tablet:
+        case .phone:
+            return 7
+        case .tablet:
             return EditorSpacing.small
         case .desktop:
             return EditorSpacing.xxLarge
@@ -374,7 +377,9 @@ enum EditorDeviceClass: Equatable {
 
     var actionVerticalPadding: CGFloat {
         switch self {
-        case .phone, .tablet:
+        case .phone:
+            return 4
+        case .tablet:
             return 5
         case .desktop:
             return EditorSpacing.large
@@ -393,9 +398,9 @@ enum EditorDeviceClass: Equatable {
     var toolIconSize: CGFloat {
         switch self {
         case .phone:
-            return 10
+            return 9
         case .tablet:
-            return 11
+            return 10
         case .desktop:
             return 15
         }
@@ -404,7 +409,7 @@ enum EditorDeviceClass: Equatable {
     var toolButtonSize: CGFloat {
         switch self {
         case .phone:
-            return 28
+            return 24
         case .tablet:
             return 24
         case .desktop:
@@ -464,9 +469,9 @@ enum EditorTypography {
     static func topBarTitle(for deviceClass: EditorDeviceClass) -> Font {
         switch deviceClass {
         case .phone:
-            return .system(size: 13, weight: .semibold)
+            return .system(size: 12, weight: .semibold)
         case .tablet:
-            return .system(size: 14, weight: .semibold)
+            return .system(size: 13, weight: .semibold)
         case .desktop:
             return .headline
         }
@@ -475,9 +480,9 @@ enum EditorTypography {
     static func topBarSubtitle(for deviceClass: EditorDeviceClass) -> Font {
         switch deviceClass {
         case .phone:
-            return .system(size: 10)
+            return .system(size: 9)
         case .tablet:
-            return .system(size: 11)
+            return .system(size: 10)
         case .desktop:
             return .caption
         }

@@ -61,12 +61,12 @@ private struct InlineCompactControlPanel: View {
     @State private var isExporting = false
 
     private var isCompact: Bool { horizontalSizeClass == .compact }
-    private var swatchSize: CGFloat { isCompact ? 24 : 26 }
-    private var swatchSpacing: CGFloat { isCompact ? EditorSpacing.xxSmall : 5 }
+    private var swatchSize: CGFloat { isCompact ? 20 : 22 }
+    private var swatchSpacing: CGFloat { isCompact ? 3 : 4 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: isCompact ? 7 : EditorSpacing.small) {
-            VStack(alignment: .leading, spacing: EditorSpacing.xSmall) {
+        VStack(alignment: .leading, spacing: isCompact ? 6 : 7) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text("Background")
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(.secondary)
@@ -113,13 +113,13 @@ private struct InlineCompactControlPanel: View {
 
             bottomSection
         }
-        .padding(.horizontal, isCompact ? EditorSpacing.medium : EditorSpacing.large)
-        .padding(.vertical, isCompact ? 7 : EditorSpacing.small)
+        .padding(.horizontal, isCompact ? EditorSpacing.small : EditorSpacing.medium)
+        .padding(.vertical, isCompact ? 5 : 6)
     }
 
     @ViewBuilder
     private var sliderSection: some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 4) {
             CompactInlineSliderRow(title: "Padding", value: $appState.padding, range: 0...200, unit: "px")
             CompactInlineSliderRow(title: "Rounded", value: $appState.cornerRadius, range: 0...40, unit: "px")
             CompactInlineSliderRow(title: "Blur", value: $appState.blurAmount, range: 0...100, unit: "%")
@@ -155,7 +155,7 @@ private struct InlineCompactControlPanel: View {
                 }
 
                 HStack(spacing: EditorSpacing.xSmall) {
-                    CompactMenuControl(title: exportFormat.rawValue, width: 52) {
+                    CompactMenuControl(title: exportFormat.rawValue, width: 48) {
                         ForEach(ImageFormat.allCases, id: \.self) { format in
                             Button(format.rawValue) {
                                 exportFormat = format
@@ -259,12 +259,12 @@ private struct InlineCompactControlPanel: View {
                         .font(EditorTypography.compactLabel)
                 }
 
-                Text("Export")
+                Text("导出")
                     .font(EditorTypography.microLabel)
             }
             .foregroundColor(.white)
-            .padding(.horizontal, 7)
-            .padding(.vertical, EditorSpacing.xxSmall)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
             .background(
                 RoundedRectangle(cornerRadius: EditorCornerRadius.compact, style: .continuous)
                     .fill(Color.accentColor)
@@ -317,7 +317,7 @@ struct CompactInlineSliderRow: View {
             Text(title)
                 .font(.caption2.weight(.semibold))
                 .foregroundColor(.secondary)
-                .frame(width: 48, alignment: .leading)
+                .frame(width: 44, alignment: .leading)
 
             CompactInlineSlider(value: $value, range: range)
                 .frame(maxWidth: .infinity)
@@ -325,9 +325,9 @@ struct CompactInlineSliderRow: View {
             Text("\(Int(value))\(unit)")
                 .font(.caption2)
                 .foregroundColor(.secondary)
-                .frame(width: 40, alignment: .trailing)
+                .frame(width: 36, alignment: .trailing)
         }
-        .frame(height: 18)
+        .frame(height: 16)
     }
 }
 
@@ -399,7 +399,7 @@ struct CompactMenuControl<MenuContent: View>: View {
                     .font(.system(size: 7, weight: .bold))
             }
             .foregroundColor(.primary)
-            .frame(width: width, height: 22)
+            .frame(width: width, height: 20)
             .background(
                 RoundedRectangle(cornerRadius: EditorCornerRadius.compact, style: .continuous)
                     .fill(Color.secondary.opacity(EditorOpacity.subtleFill))

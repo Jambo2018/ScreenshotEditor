@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.20.0] - 2026-04-18
+
+### Added
+- Added an iOS launch screen storyboard and explicit iPhone/iPad orientation settings so the universal target launches in the correct full-screen mode instead of falling back to letterboxed compatibility behavior.
+
+### Changed
+- Reworked mobile editor chrome into true top/bottom safe-area insets so the preview region uses the full remaining screen height more consistently on iPhone and iPad.
+- Reduced mobile toolbar, control-panel, and annotation-dock sizing again to free more vertical space and make the phone/tablet editing flow denser.
+- Replaced the previous full-resolution preview re-render path with a debounced, display-sized preview render pipeline so slider drags stay much smoother while export output remains full fidelity.
+
+### Fixed
+- Replaced the unsupported `pixel` SF Symbol with `square.grid.3x3.fill`, which fixes real-device launch/debug failures on current Apple system symbol sets.
+- Removed extra mobile preview padding that was exaggerating top/bottom dead space around the canvas.
+
+### Verified
+- Verified the shared project still builds for iOS with `xcodebuild -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build`.
+- Verified the shared project still builds for macOS with `xcodebuild -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build`.
+
 ## [0.1.19.0] - 2026-04-18
 
 ### Added

@@ -1420,7 +1420,7 @@ enum AnnotationTool: String, CaseIterable {
         case .text: return "textformat"
         case .arrow: return "arrow.right"
         case .rectangle: return "rectangle"
-        case .mosaic: return "pixel"
+        case .mosaic: return "square.grid.3x3.fill"
         case .freehand: return "pencil"
         }
     }
@@ -1446,7 +1446,7 @@ extension AnnotationType {
         case .ellipse: return "circle"
         case .highlight: return "marker"
         case .blur: return "blur"
-        case .mosaic: return "pixel"
+        case .mosaic: return "square.grid.3x3.fill"
         case .number: return "number"
         case .freehand: return "pencil"
         }
