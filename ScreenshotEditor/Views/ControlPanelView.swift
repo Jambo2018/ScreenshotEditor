@@ -46,11 +46,11 @@ struct ControlPanelView: View {
     }
 
     private var stackSpacing: CGFloat {
-        layoutStyle == .inline ? 8 : 10
+        layoutStyle == .inline ? EditorSpacing.small : EditorSpacing.medium
     }
 
     private var contentPadding: CGFloat {
-        layoutStyle == .inline ? 12 : 10
+        layoutStyle == .inline ? EditorSpacing.large : EditorSpacing.medium
     }
 }
 
@@ -62,11 +62,11 @@ private struct InlineCompactControlPanel: View {
 
     private var isCompact: Bool { horizontalSizeClass == .compact }
     private var swatchSize: CGFloat { isCompact ? 24 : 26 }
-    private var swatchSpacing: CGFloat { isCompact ? 4 : 5 }
+    private var swatchSpacing: CGFloat { isCompact ? EditorSpacing.xxSmall : 5 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: isCompact ? 7 : 8) {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: isCompact ? 7 : EditorSpacing.small) {
+            VStack(alignment: .leading, spacing: EditorSpacing.xSmall) {
                 Text("Background")
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(.secondary)
@@ -99,7 +99,7 @@ private struct InlineCompactControlPanel: View {
                             Color.gray.opacity(0.18)
                                 .overlay(
                                     Image(systemName: "photo")
-                                        .font(.system(size: 11, weight: .semibold))
+                                        .font(EditorTypography.sectionLabel)
                                         .foregroundColor(.secondary)
                                 )
                         }
@@ -113,8 +113,8 @@ private struct InlineCompactControlPanel: View {
 
             bottomSection
         }
-        .padding(.horizontal, isCompact ? 10 : 12)
-        .padding(.vertical, isCompact ? 7 : 8)
+        .padding(.horizontal, isCompact ? EditorSpacing.medium : EditorSpacing.large)
+        .padding(.vertical, isCompact ? 7 : EditorSpacing.small)
     }
 
     @ViewBuilder
@@ -129,8 +129,8 @@ private struct InlineCompactControlPanel: View {
     @ViewBuilder
     private var bottomSection: some View {
         if isCompact {
-            VStack(spacing: 6) {
-                HStack(spacing: 6) {
+            VStack(spacing: EditorSpacing.xSmall) {
+                HStack(spacing: EditorSpacing.xSmall) {
                     Text("Ratio")
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(.secondary)
@@ -145,7 +145,7 @@ private struct InlineCompactControlPanel: View {
                     }
 
                     if appState.exportAspectRatio == .custom {
-                        HStack(spacing: 4) {
+                        HStack(spacing: EditorSpacing.xxSmall) {
                             CompactStepper(value: $appState.customAspectRatioWidth, title: "W")
                             CompactStepper(value: $appState.customAspectRatioHeight, title: "H")
                         }
@@ -154,7 +154,7 @@ private struct InlineCompactControlPanel: View {
                     Spacer(minLength: 0)
                 }
 
-                HStack(spacing: 6) {
+                HStack(spacing: EditorSpacing.xSmall) {
                     CompactMenuControl(title: exportFormat.rawValue, width: 52) {
                         ForEach(ImageFormat.allCases, id: \.self) { format in
                             Button(format.rawValue) {
@@ -171,8 +171,8 @@ private struct InlineCompactControlPanel: View {
                 }
             }
         } else {
-            HStack(spacing: 8) {
-                HStack(spacing: 6) {
+            HStack(spacing: EditorSpacing.small) {
+                HStack(spacing: EditorSpacing.xSmall) {
                     Text("Ratio")
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(.secondary)
@@ -187,7 +187,7 @@ private struct InlineCompactControlPanel: View {
                 }
 
                 if appState.exportAspectRatio == .custom {
-                    HStack(spacing: 4) {
+                    HStack(spacing: EditorSpacing.xxSmall) {
                         CompactStepper(value: $appState.customAspectRatioWidth, title: "W")
                         CompactStepper(value: $appState.customAspectRatioHeight, title: "H")
                     }
@@ -195,7 +195,7 @@ private struct InlineCompactControlPanel: View {
                     Spacer(minLength: 0)
                 }
 
-                HStack(spacing: 6) {
+                HStack(spacing: EditorSpacing.xSmall) {
                     CompactMenuControl(title: exportFormat.rawValue, width: 54) {
                         ForEach(ImageFormat.allCases, id: \.self) { format in
                             Button(format.rawValue) {
@@ -216,10 +216,13 @@ private struct InlineCompactControlPanel: View {
         Button(action: action) {
             content()
                 .frame(width: swatchSize, height: swatchSize)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: EditorCornerRadius.small, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.2), lineWidth: isSelected ? 1.5 : 1)
+                    RoundedRectangle(cornerRadius: EditorCornerRadius.small, style: .continuous)
+                        .stroke(
+                            isSelected ? Color.accentColor : Color.gray.opacity(EditorOpacity.swatchIdleStroke),
+                            lineWidth: isSelected ? 1.5 : 1
+                        )
                 )
         }
         .buttonStyle(.plain)
@@ -230,12 +233,16 @@ private struct InlineCompactControlPanel: View {
             appState.autoCopyToClipboard.toggle()
         } label: {
             Image(systemName: appState.autoCopyToClipboard ? "doc.on.clipboard.fill" : "doc.on.clipboard")
-                .font(.system(size: 9, weight: .semibold))
+                .font(EditorTypography.microLabel)
                 .foregroundColor(appState.autoCopyToClipboard ? .accentColor : .secondary)
                 .frame(width: 24, height: 22)
                 .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(appState.autoCopyToClipboard ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: EditorCornerRadius.compact, style: .continuous)
+                        .fill(
+                            appState.autoCopyToClipboard
+                                ? Color.accentColor.opacity(EditorOpacity.accentFill)
+                                : Color.secondary.opacity(EditorOpacity.subtleFill)
+                        )
                 )
         }
         .buttonStyle(.plain)
@@ -249,17 +256,17 @@ private struct InlineCompactControlPanel: View {
                         .scaleEffect(0.55)
                 } else {
                     Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(EditorTypography.compactLabel)
                 }
 
                 Text("Export")
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(EditorTypography.microLabel)
             }
             .foregroundColor(.white)
             .padding(.horizontal, 7)
-            .padding(.vertical, 4)
+            .padding(.vertical, EditorSpacing.xxSmall)
             .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                RoundedRectangle(cornerRadius: EditorCornerRadius.compact, style: .continuous)
                     .fill(Color.accentColor)
             )
         }
@@ -305,7 +312,7 @@ struct CompactInlineSliderRow: View {
     let unit: String
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: EditorSpacing.xSmall) {
             Text(title)
                 .font(.caption2.weight(.semibold))
                 .foregroundColor(.secondary)
@@ -346,7 +353,7 @@ struct CompactInlineSlider: View {
                 Circle()
                     .fill(Color.white)
                     .frame(width: knobSize, height: knobSize)
-                    .shadow(color: .black.opacity(0.12), radius: 1, x: 0, y: 1)
+                    .shadow(color: .black.opacity(EditorOpacity.accentFill), radius: 1, x: 0, y: 1)
                     .overlay(
                         Circle()
                             .stroke(Color.accentColor.opacity(0.9), lineWidth: 1)
@@ -385,7 +392,7 @@ struct CompactMenuControl<MenuContent: View>: View {
         } label: {
             HStack(spacing: 3) {
                 Text(title)
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(EditorTypography.microLabel)
                     .lineLimit(1)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 7, weight: .bold))
@@ -393,8 +400,8 @@ struct CompactMenuControl<MenuContent: View>: View {
             .foregroundColor(.primary)
             .frame(width: width, height: 22)
             .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color.secondary.opacity(0.08))
+                RoundedRectangle(cornerRadius: EditorCornerRadius.compact, style: .continuous)
+                    .fill(Color.secondary.opacity(EditorOpacity.subtleFill))
             )
         }
         .menuStyle(.borderlessButton)
@@ -412,7 +419,7 @@ struct CompactStepper: View {
             }
 
             Text("\(title) \(Int(value))")
-                .font(.system(size: 9, weight: .semibold))
+                .font(EditorTypography.microLabel)
                 .foregroundColor(.secondary)
                 .frame(minWidth: 32)
 
@@ -429,8 +436,8 @@ struct CompactStepper: View {
                 .foregroundColor(.primary)
                 .frame(width: 16, height: 16)
                 .background(
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                        .fill(Color.secondary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: EditorCornerRadius.tiny, style: .continuous)
+                        .fill(Color.secondary.opacity(EditorOpacity.subtleFill))
                 )
         }
         .buttonStyle(.plain)
@@ -444,11 +451,11 @@ struct BackgroundSection: View {
     let layoutStyle: ControlPanelView.LayoutStyle
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: EditorSpacing.small) {
             Text("Background")
                 .font(sectionHeaderFont)
 
-            LazyVGrid(columns: swatchColumns, spacing: 8) {
+            LazyVGrid(columns: swatchColumns, spacing: EditorSpacing.small) {
                 ForEach(GradientPreset.presets) { preset in
                     Button(action: { selectPreset(preset) }) {
                         SwatchCard(
@@ -499,7 +506,13 @@ struct BackgroundSection: View {
     }
 
     private var swatchColumns: [GridItem] {
-        Array(repeating: GridItem(.flexible(minimum: swatchSize - 4, maximum: swatchSize + 8), spacing: 8), count: 5)
+        Array(
+            repeating: GridItem(
+                .flexible(minimum: swatchSize - EditorSpacing.xxSmall, maximum: swatchSize + EditorSpacing.small),
+                spacing: EditorSpacing.small
+            ),
+            count: 5
+        )
     }
 
     private var swatchSize: CGFloat {
@@ -543,13 +556,16 @@ private struct SwatchCard<Preview: View>: View {
     @ViewBuilder let preview: () -> Preview
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: EditorSpacing.xxSmall) {
             preview()
                 .frame(width: size, height: size)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .clipShape(RoundedRectangle(cornerRadius: EditorCornerRadius.medium))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.28), lineWidth: isSelected ? 2.0 : 1.0)
+                    RoundedRectangle(cornerRadius: EditorCornerRadius.medium)
+                        .stroke(
+                            isSelected ? Color.accentColor : Color.gray.opacity(EditorOpacity.swatchStrongStroke),
+                            lineWidth: isSelected ? 2.0 : 1.0
+                        )
                 )
 
             Text(title)
@@ -576,7 +592,7 @@ struct CheckerboardView: View {
                         width: tileSize,
                         height: tileSize
                     )
-                    context.fill(Path(rect), with: .color(Color.gray.opacity(0.28)))
+                    context.fill(Path(rect), with: .color(Color.gray.opacity(EditorOpacity.swatchStrongStroke)))
                 }
             }
         }

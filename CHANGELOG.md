@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.18.0] - 2026-04-18
+
+### Added
+- Added shared editor design tokens for spacing, typography, corner radii, opacity, and device-class sizing rules so the refactor has a reusable layout system instead of one-off view constants.
+
+### Changed
+- Replaced many hard-coded layout values across the primary editor screens, canvas action bars, compact control panel, and annotation panel with shared design tokens.
+- Unified phone, tablet, and desktop toolbar/panel sizing through shared `EditorDeviceClass` metrics to make shell spacing and control density more consistent.
+
 ## [0.1.17.0] - 2026-04-18
 
 ### Changed

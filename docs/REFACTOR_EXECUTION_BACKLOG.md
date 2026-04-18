@@ -51,11 +51,11 @@
 
 ## Phase 4 — Design system and tokens
 ### Tasks
-- [ ] Add spacing tokens
-- [ ] Add typography tokens
-- [ ] Add control sizing tokens
-- [ ] Add toolbar/panel sizing rules by device class
-- [ ] Replace magic numbers in primary screens/components
+- [x] Add spacing tokens
+- [x] Add typography tokens
+- [x] Add control sizing tokens
+- [x] Add toolbar/panel sizing rules by device class
+- [x] Replace magic numbers in primary screens/components
 
 ### Exit criteria
 - Major screens no longer define one-off sizing values inline

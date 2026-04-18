@@ -27,8 +27,8 @@ struct AnnotationPanelView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
+                .padding(.horizontal, EditorSpacing.large)
+                .padding(.vertical, EditorSpacing.medium)
             }
             .buttonStyle(.plain)
 
@@ -43,7 +43,7 @@ struct AnnotationPanelView: View {
 
                         AnnotationsListSection()
                     }
-                    .padding(12)
+                    .padding(EditorSpacing.large)
                 }
             }
         }
@@ -57,7 +57,7 @@ struct ToolSettingsSection: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: EditorSpacing.large) {
             HStack {
                 Text("当前工具")
                     .font(.caption)
@@ -75,7 +75,7 @@ struct ToolSettingsSection: View {
                 Text("选择工具：点击标注进行编辑或删除")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, EditorSpacing.small)
 
             case .text:
                 TextSettingsView()
@@ -96,14 +96,14 @@ struct TextSettingsView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: EditorSpacing.medium) {
             // Color picker
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: EditorSpacing.xSmall) {
                 Text("文字颜色")
                     .font(.caption2)
                     .foregroundColor(.secondary)
 
-                HStack(spacing: 6) {
+                HStack(spacing: EditorSpacing.xSmall) {
                     ForEach([Color.white, Color.black, Color.red, Color.green, Color.blue, Color.yellow], id: \.self) { color in
                         Circle()
                             .fill(color)
@@ -122,7 +122,7 @@ struct TextSettingsView: View {
             }
 
             // Font size slider
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: EditorSpacing.xSmall) {
                 HStack {
                     Text("大小")
                         .font(.caption2)
@@ -144,14 +144,14 @@ struct ShapeSettingsView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: EditorSpacing.medium) {
             // Color picker
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: EditorSpacing.xSmall) {
                 Text("颜色")
                     .font(.caption2)
                     .foregroundColor(.secondary)
 
-                HStack(spacing: 6) {
+                HStack(spacing: EditorSpacing.xSmall) {
                     ForEach([Color.red, Color.green, Color.blue, Color.yellow, Color.white, Color.black], id: \.self) { color in
                         Circle()
                             .fill(color)
@@ -170,7 +170,7 @@ struct ShapeSettingsView: View {
             }
 
             // Stroke width slider
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: EditorSpacing.xSmall) {
                 HStack {
                     Text("粗细")
                         .font(.caption2)
@@ -192,14 +192,14 @@ struct BrushSettingsView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: EditorSpacing.medium) {
             if appState.selectedAnnotationTool == .freehand {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: EditorSpacing.xSmall) {
                     Text("颜色")
                         .font(.caption2)
                         .foregroundColor(.secondary)
 
-                    HStack(spacing: 6) {
+                    HStack(spacing: EditorSpacing.xSmall) {
                         ForEach([Color.red, Color.green, Color.blue, Color.yellow, Color.white, Color.black], id: \.self) { color in
                             Circle()
                                 .fill(color)
@@ -219,7 +219,7 @@ struct BrushSettingsView: View {
             }
 
             // Brush size slider
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: EditorSpacing.xSmall) {
                 HStack {
                     Text("大小")
                         .font(.caption2)
@@ -233,7 +233,7 @@ struct BrushSettingsView: View {
             }
 
             // Opacity slider
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: EditorSpacing.xSmall) {
                 HStack {
                     Text("不透明度")
                         .font(.caption2)
@@ -255,7 +255,7 @@ struct AnnotationsListSection: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: EditorSpacing.small) {
             HStack {
                 Text("标注列表")
                     .font(.caption)
@@ -281,7 +281,7 @@ struct AnnotationsListSection: View {
                 Text("暂无标注")
                     .font(.caption2)
                     .foregroundColor(.gray)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, EditorSpacing.small)
             } else {
                 ForEach(appState.annotations) { annotation in
                     AnnotationRowView(annotation: annotation)
@@ -301,7 +301,7 @@ struct AnnotationRowView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: EditorSpacing.small) {
             Image(systemName: annotation.type.icon)
                 .foregroundColor(.secondary)
                 .frame(width: 20)
@@ -324,10 +324,10 @@ struct AnnotationRowView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, EditorSpacing.small)
+        .padding(.vertical, EditorSpacing.xxSmall)
         .background(
-            RoundedRectangle(cornerRadius: 4)
+            RoundedRectangle(cornerRadius: EditorCornerRadius.tiny)
                 .fill(appState.selectedAnnotationId == annotation.id ? Color.accentColor.opacity(0.2) : Color.clear)
         )
     }

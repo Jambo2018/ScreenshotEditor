@@ -151,3 +151,357 @@ extension Color {
         #endif
     }
 }
+
+enum EditorDeviceClass: Equatable {
+    case phone
+    case tablet
+    case desktop
+
+    var canvasPadding: EdgeInsets {
+        switch self {
+        case .phone:
+            return EdgeInsets()
+        case .tablet:
+            return EdgeInsets(
+                top: EditorSpacing.medium,
+                leading: EditorSpacing.medium,
+                bottom: EditorSpacing.medium,
+                trailing: EditorSpacing.medium
+            )
+        case .desktop:
+            return EdgeInsets(
+                top: EditorSpacing.xLarge,
+                leading: EditorSpacing.xxLarge,
+                bottom: EditorSpacing.xLarge,
+                trailing: EditorSpacing.xxLarge
+            )
+        }
+    }
+
+    var topBarPadding: EdgeInsets {
+        switch self {
+        case .phone:
+            return EdgeInsets(
+                top: EditorSpacing.xSmall,
+                leading: EditorSpacing.medium,
+                bottom: EditorSpacing.small,
+                trailing: EditorSpacing.medium
+            )
+        case .tablet:
+            return EdgeInsets(
+                top: EditorSpacing.small,
+                leading: EditorSpacing.xLarge,
+                bottom: EditorSpacing.medium,
+                trailing: EditorSpacing.xLarge
+            )
+        case .desktop:
+            return EdgeInsets(
+                top: EditorSpacing.xLarge,
+                leading: EditorSpacing.xxLarge,
+                bottom: EditorSpacing.xLarge,
+                trailing: EditorSpacing.xxLarge
+            )
+        }
+    }
+
+    var topBarButtonSide: CGFloat {
+        switch self {
+        case .phone:
+            return 28
+        case .tablet:
+            return 30
+        case .desktop:
+            return 32
+        }
+    }
+
+    var workspaceHorizontalPadding: CGFloat {
+        switch self {
+        case .phone:
+            return EditorSpacing.medium
+        case .tablet:
+            return EditorSpacing.xLarge
+        case .desktop:
+            return EditorSpacing.xxLarge
+        }
+    }
+
+    var workspaceVerticalPadding: CGFloat {
+        switch self {
+        case .phone:
+            return EditorSpacing.small
+        case .tablet:
+            return EditorSpacing.medium
+        case .desktop:
+            return EditorSpacing.xLarge
+        }
+    }
+
+    var workspacePrimarySpacing: CGFloat {
+        switch self {
+        case .phone:
+            return EditorSpacing.small
+        case .tablet:
+            return EditorSpacing.medium
+        case .desktop:
+            return EditorSpacing.large
+        }
+    }
+
+    var workspaceSectionWidth: CGFloat? {
+        switch self {
+        case .phone:
+            return nil
+        case .tablet:
+            return 248
+        case .desktop:
+            return 332
+        }
+    }
+
+    var previewPadding: CGFloat {
+        switch self {
+        case .phone:
+            return EditorSpacing.xxSmall
+        case .tablet:
+            return EditorSpacing.small
+        case .desktop:
+            return EditorSpacing.xxLarge
+        }
+    }
+
+    var bottomBarHorizontalPadding: CGFloat {
+        switch self {
+        case .phone:
+            return EditorSpacing.small
+        case .tablet:
+            return EditorSpacing.medium
+        case .desktop:
+            return EditorSpacing.xxxLarge
+        }
+    }
+
+    var bottomBarVerticalPadding: CGFloat {
+        switch self {
+        case .phone:
+            return EditorSpacing.xSmall
+        case .tablet:
+            return 7
+        case .desktop:
+            return EditorSpacing.xLarge
+        }
+    }
+
+    var bottomBarActionSpacing: CGFloat {
+        switch self {
+        case .phone:
+            return 5
+        case .tablet:
+            return EditorSpacing.xSmall
+        case .desktop:
+            return EditorSpacing.medium
+        }
+    }
+
+    var bottomBarSpacing: CGFloat {
+        switch self {
+        case .phone:
+            return 0
+        case .tablet:
+            return EditorSpacing.small
+        case .desktop:
+            return EditorSpacing.xLarge
+        }
+    }
+
+    var bottomBarToolSpacing: CGFloat {
+        switch self {
+        case .phone:
+            return 5
+        case .tablet:
+            return EditorSpacing.xxSmall
+        case .desktop:
+            return EditorSpacing.small
+        }
+    }
+
+    var bottomBarSeparatorHeight: CGFloat {
+        switch self {
+        case .phone:
+            return 0
+        case .tablet:
+            return 18
+        case .desktop:
+            return 34
+        }
+    }
+
+    var actionTitleSize: CGFloat {
+        switch self {
+        case .phone, .tablet:
+            return 10
+        case .desktop:
+            return 16
+        }
+    }
+
+    var actionIconSize: CGFloat {
+        switch self {
+        case .phone, .tablet:
+            return 10
+        case .desktop:
+            return 16
+        }
+    }
+
+    var buttonIconSpacing: CGFloat {
+        switch self {
+        case .phone, .tablet:
+            return 3
+        case .desktop:
+            return EditorSpacing.small
+        }
+    }
+
+    var actionHorizontalPadding: CGFloat {
+        switch self {
+        case .phone, .tablet:
+            return EditorSpacing.small
+        case .desktop:
+            return EditorSpacing.xxLarge
+        }
+    }
+
+    var actionVerticalPadding: CGFloat {
+        switch self {
+        case .phone, .tablet:
+            return 5
+        case .desktop:
+            return EditorSpacing.large
+        }
+    }
+
+    var actionCornerRadius: CGFloat {
+        switch self {
+        case .phone, .tablet:
+            return EditorCornerRadius.compact
+        case .desktop:
+            return EditorCornerRadius.panel
+        }
+    }
+
+    var toolIconSize: CGFloat {
+        switch self {
+        case .phone:
+            return 10
+        case .tablet:
+            return 11
+        case .desktop:
+            return 15
+        }
+    }
+
+    var toolButtonSize: CGFloat {
+        switch self {
+        case .phone:
+            return 28
+        case .tablet:
+            return 24
+        case .desktop:
+            return 38
+        }
+    }
+
+    var toolCornerRadius: CGFloat {
+        switch self {
+        case .phone, .tablet:
+            return 7
+        case .desktop:
+            return EditorCornerRadius.xLarge
+        }
+    }
+}
+
+enum EditorSpacing {
+    static let micro: CGFloat = 2
+    static let xxSmall: CGFloat = 4
+    static let xSmall: CGFloat = 6
+    static let small: CGFloat = 8
+    static let medium: CGFloat = 10
+    static let large: CGFloat = 12
+    static let xLarge: CGFloat = 14
+    static let xxLarge: CGFloat = 18
+    static let xxxLarge: CGFloat = 20
+}
+
+enum EditorCornerRadius {
+    static let tiny: CGFloat = 4
+    static let compact: CGFloat = 6
+    static let small: CGFloat = 8
+    static let medium: CGFloat = 10
+    static let xLarge: CGFloat = 12
+    static let panel: CGFloat = 14
+}
+
+enum EditorOpacity {
+    static let subtleFill: Double = 0.08
+    static let accentFill: Double = 0.12
+    static let panelFill: Double = 0.07
+    static let selectedFill: Double = 0.18
+    static let separator: Double = 0.28
+    static let toolbar: Double = 0.98
+    static let swatchIdleStroke: Double = 0.22
+    static let swatchStrongStroke: Double = 0.28
+}
+
+enum EditorTypography {
+    static let microLabel = Font.system(size: 9, weight: .semibold)
+    static let compactLabel = Font.system(size: 10, weight: .semibold)
+    static let sectionLabel = Font.system(size: 11, weight: .semibold)
+    static let welcomeButton = Font.system(size: 12, weight: .semibold)
+    static let statusChip = Font.system(size: 10, weight: .semibold)
+
+    static func topBarTitle(for deviceClass: EditorDeviceClass) -> Font {
+        switch deviceClass {
+        case .phone:
+            return .system(size: 13, weight: .semibold)
+        case .tablet:
+            return .system(size: 14, weight: .semibold)
+        case .desktop:
+            return .headline
+        }
+    }
+
+    static func topBarSubtitle(for deviceClass: EditorDeviceClass) -> Font {
+        switch deviceClass {
+        case .phone:
+            return .system(size: 10)
+        case .tablet:
+            return .system(size: 11)
+        case .desktop:
+            return .caption
+        }
+    }
+
+    static func workspaceTitle(for deviceClass: EditorDeviceClass) -> Font {
+        switch deviceClass {
+        case .phone:
+            return .system(size: 11, weight: .semibold)
+        case .tablet:
+            return .system(size: 12, weight: .semibold)
+        case .desktop:
+            return .headline
+        }
+    }
+
+    static func workspaceSubtitle(for deviceClass: EditorDeviceClass) -> Font {
+        switch deviceClass {
+        case .phone:
+            return .system(size: 9)
+        case .tablet:
+            return .system(size: 10)
+        case .desktop:
+            return .caption
+        }
+    }
+}

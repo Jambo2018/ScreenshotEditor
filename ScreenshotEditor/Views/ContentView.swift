@@ -178,76 +178,45 @@ private enum WorkspaceDensity: Equatable {
     case phone
     case tablet
 
-    var cardPadding: CGFloat {
+    var deviceClass: EditorDeviceClass {
         switch self {
         case .phone:
-            return 9
+            return .phone
         case .tablet:
-            return 12
+            return .tablet
         }
+    }
+
+    var cardPadding: CGFloat {
+        deviceClass == .phone ? 9 : EditorSpacing.large
     }
 
     var cardSpacing: CGFloat {
-        switch self {
-        case .phone:
-            return 7
-        case .tablet:
-            return 10
-        }
+        deviceClass == .phone ? 7 : EditorSpacing.medium
     }
 
     var titleSize: CGFloat {
-        switch self {
-        case .phone:
-            return 11
-        case .tablet:
-            return 12
-        }
+        deviceClass == .phone ? 11 : 12
     }
 
     var subtitleSize: CGFloat {
-        switch self {
-        case .phone:
-            return 9
-        case .tablet:
-            return 10
-        }
+        deviceClass == .phone ? 9 : 10
     }
 
     var swatchSize: CGFloat {
-        switch self {
-        case .phone:
-            return 22
-        case .tablet:
-            return 28
-        }
+        deviceClass == .phone ? 22 : 28
     }
 
     var swatchColumns: Int {
-        switch self {
-        case .phone:
-            return 5
-        case .tablet:
-            return 5
-        }
+        5
     }
 
     var gridSpacing: CGFloat {
-        switch self {
-        case .phone:
-            return 5
-        case .tablet:
-            return 7
-        }
+        deviceClass == .phone ? 5 : 7
     }
 
     var menuWidth: CGFloat {
-        switch self {
-        case .phone:
-            return 80
-        case .tablet:
-            return 92
-        }
+        deviceClass == .phone ? 80 : 92
     }
 }
 
@@ -257,18 +226,18 @@ private struct EditorCanvasRegion: View {
     var body: some View {
         CanvasView(showsEditingBottomBar: false)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(canvasPadding)
+            .padding(deviceClass.canvasPadding)
             .background(Color.editorPanelBackground)
     }
 
-    private var canvasPadding: EdgeInsets {
+    private var deviceClass: EditorDeviceClass {
         switch shell {
         case .desktop:
-            return EdgeInsets(top: 16, leading: 18, bottom: 16, trailing: 18)
+            return .desktop
         case .tablet:
-            return EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
+            return .tablet
         case .phone:
-            return EdgeInsets()
+            return .phone
         }
     }
 }
@@ -328,22 +297,16 @@ private enum MobileEditorLayout: Equatable {
     case phone
     case tablet
 
+    var deviceClass: EditorDeviceClass {
+        self == .phone ? .phone : .tablet
+    }
+
     var titleSpacing: CGFloat {
-        switch self {
-        case .phone:
-            return 2
-        case .tablet:
-            return 3
-        }
+        self == .phone ? EditorSpacing.micro : 3
     }
 
     var padding: EdgeInsets {
-        switch self {
-        case .phone:
-            return EdgeInsets(top: 6, leading: 10, bottom: 8, trailing: 10)
-        case .tablet:
-            return EdgeInsets(top: 8, leading: 14, bottom: 10, trailing: 14)
-        }
+        deviceClass.topBarPadding
     }
 }
 
@@ -356,9 +319,9 @@ private struct EditorTopBar: View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: layout.titleSpacing) {
                 Text(sceneState.title)
-                    .font(.system(size: layout == .phone ? 13 : 14, weight: .semibold))
+                    .font(EditorTypography.topBarTitle(for: layout.deviceClass))
                 Text(sceneState.subtitle)
-                    .font(.system(size: layout == .phone ? 10 : 11))
+                    .font(EditorTypography.topBarSubtitle(for: layout.deviceClass))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
@@ -371,12 +334,15 @@ private struct EditorTopBar: View {
 
             Button(action: { appState.shareCurrent() }) {
                 Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: layout == .phone ? 12 : 13, weight: .semibold))
+                    .font(.system(size: layout.deviceClass == .phone ? 12 : 13, weight: .semibold))
                     .foregroundColor(appState.hasScreenshot && !appState.isExporting ? .primary : .secondary)
-                    .frame(width: layout == .phone ? 28 : 30, height: layout == .phone ? 28 : 30)
+                    .frame(
+                        width: layout.deviceClass.topBarButtonSide,
+                        height: layout.deviceClass.topBarButtonSide
+                    )
                     .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Color.secondary.opacity(0.08))
+                        RoundedRectangle(cornerRadius: EditorCornerRadius.small, style: .continuous)
+                            .fill(Color.secondary.opacity(EditorOpacity.subtleFill))
                     )
             }
             .buttonStyle(.plain)
@@ -384,7 +350,7 @@ private struct EditorTopBar: View {
             .accessibilityLabel("分享")
         }
         .padding(layout.padding)
-        .background(Color.editorPanelBackground.opacity(0.98))
+        .background(Color.editorPanelBackground.opacity(EditorOpacity.toolbar))
     }
 }
 
@@ -413,8 +379,8 @@ private struct PhoneEditingWorkspace: View {
                 CompactOutputSection(exportFormat: $exportFormat, density: .phone)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.horizontal, EditorDeviceClass.phone.workspaceHorizontalPadding)
+        .padding(.vertical, EditorDeviceClass.phone.workspaceVerticalPadding)
         .background(Color.editorPanelBackground)
     }
 }
@@ -440,7 +406,7 @@ private struct TabletEditingWorkspace: View {
             ) {
                 CompactAdjustmentsSection()
             }
-            .frame(width: 248, alignment: .top)
+            .frame(width: EditorDeviceClass.tablet.workspaceSectionWidth, alignment: .top)
 
             WorkspaceCard(
                 title: "输出",
@@ -451,8 +417,8 @@ private struct TabletEditingWorkspace: View {
             }
             .frame(width: 250, alignment: .top)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, EditorDeviceClass.tablet.workspaceHorizontalPadding)
+        .padding(.vertical, EditorDeviceClass.tablet.workspaceVerticalPadding)
         .background(Color.editorPanelBackground)
     }
 }
@@ -496,7 +462,7 @@ private struct DesktopEditorScreen: View {
             Divider()
 
             DesktopInspector()
-                .frame(width: 332)
+                .frame(width: EditorDeviceClass.desktop.workspaceSectionWidth)
                 .frame(maxHeight: .infinity)
                 .background(Color.editorPanelBackground)
         }
@@ -511,9 +477,9 @@ private struct DesktopContextBar: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(appState.hasScreenshot ? "Desktop Editor" : "Ready to import")
-                    .font(.headline)
+                    .font(EditorTypography.topBarTitle(for: .desktop))
                 Text(contextSubtitle)
-                    .font(.caption)
+                    .font(EditorTypography.topBarSubtitle(for: .desktop))
                     .foregroundColor(.secondary)
             }
 
@@ -523,8 +489,8 @@ private struct DesktopContextBar: View {
                 StatusChip(title: appState.isExporting ? "Exporting" : "Preview = Export")
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
+        .padding(.horizontal, EditorDeviceClass.desktop.topBarPadding.leading)
+        .padding(.vertical, EditorDeviceClass.desktop.topBarPadding.top)
         .background(Color.editorPanelBackground)
     }
 
@@ -556,7 +522,7 @@ private struct DesktopInspector: View {
                 }
                 DesktopAnnotationInspectorCard()
             }
-            .padding(14)
+            .padding(EditorSpacing.xLarge)
         }
         .scrollIndicators(.hidden)
     }
@@ -640,10 +606,10 @@ private struct DesktopInspectorCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             content()
         }
-        .padding(14)
+        .padding(EditorSpacing.xLarge)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.secondary.opacity(0.07))
+            RoundedRectangle(cornerRadius: EditorCornerRadius.panel, style: .continuous)
+                .fill(Color.secondary.opacity(EditorOpacity.panelFill))
         )
     }
 }
@@ -663,11 +629,11 @@ private struct WorkspaceCard<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: density.cardSpacing) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: EditorSpacing.micro) {
                 Text(title)
-                    .font(.system(size: density.titleSize, weight: .semibold))
+                    .font(EditorTypography.workspaceTitle(for: density.deviceClass))
                 Text(subtitle)
-                    .font(.system(size: density.subtitleSize))
+                    .font(EditorTypography.workspaceSubtitle(for: density.deviceClass))
                     .foregroundColor(.secondary)
             }
 
@@ -676,8 +642,8 @@ private struct WorkspaceCard<Content: View>: View {
         .padding(density.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.secondary.opacity(0.07))
+            RoundedRectangle(cornerRadius: EditorCornerRadius.panel, style: .continuous)
+                .fill(Color.secondary.opacity(EditorOpacity.panelFill))
         )
     }
 }
@@ -767,10 +733,13 @@ private struct CompactBackgroundPalette: View {
         Button(action: action) {
             content()
                 .frame(width: density.swatchSize, height: density.swatchSize)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: EditorCornerRadius.small, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.22), lineWidth: isSelected ? 1.5 : 1)
+                    RoundedRectangle(cornerRadius: EditorCornerRadius.small, style: .continuous)
+                        .stroke(
+                            isSelected ? Color.accentColor : Color.gray.opacity(EditorOpacity.swatchIdleStroke),
+                            lineWidth: isSelected ? 1.5 : 1
+                        )
                 )
         }
         .buttonStyle(.plain)
@@ -874,13 +843,13 @@ private struct CompactOutputSection: View {
                 }
 
                 Text("导出")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(EditorTypography.compactLabel)
             }
             .foregroundColor(.white)
             .padding(.horizontal, density == .phone ? 7 : 9)
             .padding(.vertical, 5)
             .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                RoundedRectangle(cornerRadius: EditorCornerRadius.compact, style: .continuous)
                     .fill(Color.accentColor)
             )
         }
@@ -906,12 +875,16 @@ private struct CompactClipboardToggle: View {
             appState.autoCopyToClipboard.toggle()
         } label: {
             Image(systemName: appState.autoCopyToClipboard ? "doc.on.clipboard.fill" : "doc.on.clipboard")
-                .font(.system(size: 9, weight: .semibold))
+                .font(EditorTypography.microLabel)
                 .foregroundColor(appState.autoCopyToClipboard ? .accentColor : .secondary)
                 .frame(width: 24, height: 22)
                 .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(appState.autoCopyToClipboard ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: EditorCornerRadius.compact, style: .continuous)
+                        .fill(
+                            appState.autoCopyToClipboard
+                                ? Color.accentColor.opacity(EditorOpacity.accentFill)
+                                : Color.secondary.opacity(EditorOpacity.subtleFill)
+                        )
                 )
         }
         .buttonStyle(.plain)
@@ -924,13 +897,13 @@ private struct StatusChip: View {
 
     var body: some View {
         Text(title)
-            .font(.system(size: 10, weight: .semibold))
+            .font(EditorTypography.statusChip)
             .foregroundColor(.accentColor)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, EditorSpacing.small)
             .padding(.vertical, 5)
             .background(
                 Capsule(style: .continuous)
-                    .fill(Color.accentColor.opacity(0.12))
+                    .fill(Color.accentColor.opacity(EditorOpacity.accentFill))
             )
     }
 }

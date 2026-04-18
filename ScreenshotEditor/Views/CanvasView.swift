@@ -47,9 +47,9 @@ struct CanvasView: View {
         let previewAspectRatio = max(previewSize.width, 1) / max(previewSize.height, 1)
         let previewPadding: CGFloat = {
             #if os(iOS)
-            return horizontalSizeClass == .compact ? 4 : 8
+            return (horizontalSizeClass == .compact ? EditorDeviceClass.phone : EditorDeviceClass.tablet).previewPadding
             #else
-            return 24
+            return EditorDeviceClass.desktop.previewPadding
             #endif
         }()
 
@@ -188,15 +188,15 @@ struct WelcomeView: View {
 
     private var welcomeSpacing: CGFloat {
         #if os(iOS)
-        return 14
+        return EditorSpacing.xLarge
         #else
-        return 20
+        return EditorSpacing.xxxLarge
         #endif
     }
 
     private var welcomePadding: CGFloat {
         #if os(iOS)
-        return 20
+        return EditorSpacing.xxxLarge
         #else
         return 32
         #endif
@@ -213,7 +213,7 @@ struct CanvasActionBar: View {
     var style: Style = .compact
 
     var body: some View {
-        HStack(spacing: style == .large ? 8 : 10) {
+        HStack(spacing: style == .large ? EditorSpacing.small : EditorSpacing.medium) {
             if appState.canCaptureScreen {
                 captureButton
             }
@@ -221,14 +221,14 @@ struct CanvasActionBar: View {
             photoButtonIfNeeded
             importButton
         }
-        .padding(style == .large ? 0 : 10)
+        .padding(style == .large ? 0 : EditorSpacing.medium)
         .background {
             if style == .compact {
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: EditorCornerRadius.xLarge)
                     .fill(.regularMaterial)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: EditorCornerRadius.xLarge))
     }
 
     @ViewBuilder
@@ -288,16 +288,16 @@ struct CanvasActionBar: View {
         Button(action: action) {
             HStack(spacing: 5) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(EditorTypography.welcomeButton)
                 Text(title)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(EditorTypography.welcomeButton)
             }
             .foregroundColor(prominent ? .white : .primary)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, EditorSpacing.medium)
             .padding(.vertical, 7)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(prominent ? Color.accentColor : Color.secondary.opacity(0.08))
+                RoundedRectangle(cornerRadius: EditorCornerRadius.medium, style: .continuous)
+                    .fill(prominent ? Color.accentColor : Color.secondary.opacity(EditorOpacity.subtleFill))
             )
         }
         .buttonStyle(.plain)
@@ -407,74 +407,43 @@ struct EditingBottomBar: View {
         #endif
     }
 
+    private var deviceClass: EditorDeviceClass {
+        switch resolvedLayoutStyle {
+        case .phone:
+            return .phone
+        case .tablet:
+            return .tablet
+        case .desktop:
+            return .desktop
+        }
+    }
+
     private var barBackground: Color {
         Color(red: 0.75, green: 0.86, blue: 0.91).opacity(resolvedLayoutStyle == .desktop ? 0.92 : 0.96)
     }
 
     private var horizontalPadding: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 8
-        case .tablet:
-            return 10
-        case .desktop:
-            return 20
-        }
+        deviceClass.bottomBarHorizontalPadding
     }
 
     private var verticalPadding: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 6
-        case .tablet:
-            return 7
-        case .desktop:
-            return 14
-        }
+        deviceClass.bottomBarVerticalPadding
     }
 
     private var actionSpacing: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 5
-        case .tablet:
-            return 6
-        case .desktop:
-            return 10
-        }
+        deviceClass.bottomBarActionSpacing
     }
 
     private var barSpacing: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 0
-        case .tablet:
-            return 8
-        case .desktop:
-            return 14
-        }
+        deviceClass.bottomBarSpacing
     }
 
     private var toolSpacing: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 5
-        case .tablet:
-            return 4
-        case .desktop:
-            return 8
-        }
+        deviceClass.bottomBarToolSpacing
     }
 
     private var separatorHeight: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 0
-        case .tablet:
-            return 18
-        case .desktop:
-            return 34
-        }
+        deviceClass.bottomBarSeparatorHeight
     }
 
     private func actionButton(title: String, systemImage: String, prominent: Bool, action: @escaping () -> Void) -> some View {
@@ -490,7 +459,7 @@ struct EditingBottomBar: View {
             .padding(.vertical, actionVerticalPadding)
             .background(
                 RoundedRectangle(cornerRadius: actionCornerRadius, style: .continuous)
-                    .fill(prominent ? Color.accentColor : Color.white.opacity(0.22))
+                    .fill(prominent ? Color.accentColor : Color.white.opacity(EditorOpacity.swatchIdleStroke))
             )
         }
         .buttonStyle(.plain)
@@ -511,14 +480,14 @@ struct EditingBottomBar: View {
                         Image(systemName: tool.icon)
                             .font(.system(size: toolIconSize, weight: .semibold))
                         Text(tool.title)
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(EditorTypography.compactLabel)
                             .lineLimit(1)
                     }
                     .foregroundColor(isSelected ? .white : Color.primary.opacity(0.82))
                     .frame(maxWidth: .infinity, minHeight: toolButtonSize)
                     .background(
                         RoundedRectangle(cornerRadius: toolCornerRadius, style: .continuous)
-                            .fill(isSelected ? Color.accentColor : Color.white.opacity(0.18))
+                            .fill(isSelected ? Color.accentColor : Color.white.opacity(EditorOpacity.selectedFill))
                     )
                 } else {
                     Image(systemName: tool.icon)
@@ -527,7 +496,7 @@ struct EditingBottomBar: View {
                         .frame(width: toolButtonSize, height: toolButtonSize)
                         .background(
                             RoundedRectangle(cornerRadius: toolCornerRadius, style: .continuous)
-                                .fill(isSelected ? Color.accentColor : Color.white.opacity(0.18))
+                                .fill(isSelected ? Color.accentColor : Color.white.opacity(EditorOpacity.selectedFill))
                         )
                 }
             }
@@ -537,102 +506,39 @@ struct EditingBottomBar: View {
     }
 
     private var actionTitleSize: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 10
-        case .tablet:
-            return 10
-        case .desktop:
-            return 16
-        }
+        deviceClass.actionTitleSize
     }
 
     private var actionIconSize: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 10
-        case .tablet:
-            return 10
-        case .desktop:
-            return 16
-        }
+        deviceClass.actionIconSize
     }
 
     private var buttonIconSpacing: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 3
-        case .tablet:
-            return 3
-        case .desktop:
-            return 8
-        }
+        deviceClass.buttonIconSpacing
     }
 
     private var actionHorizontalPadding: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 8
-        case .tablet:
-            return 8
-        case .desktop:
-            return 18
-        }
+        deviceClass.actionHorizontalPadding
     }
 
     private var actionVerticalPadding: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 5
-        case .tablet:
-            return 5
-        case .desktop:
-            return 12
-        }
+        deviceClass.actionVerticalPadding
     }
 
     private var actionCornerRadius: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 7
-        case .tablet:
-            return 7
-        case .desktop:
-            return 14
-        }
+        deviceClass.actionCornerRadius
     }
 
     private var toolIconSize: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 10
-        case .tablet:
-            return 11
-        case .desktop:
-            return 15
-        }
+        deviceClass.toolIconSize
     }
 
     private var toolButtonSize: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 28
-        case .tablet:
-            return 24
-        case .desktop:
-            return 38
-        }
+        deviceClass.toolButtonSize
     }
 
     private var toolCornerRadius: CGFloat {
-        switch resolvedLayoutStyle {
-        case .phone:
-            return 7
-        case .tablet:
-            return 7
-        case .desktop:
-            return 12
-        }
+        deviceClass.toolCornerRadius
     }
 }
 
