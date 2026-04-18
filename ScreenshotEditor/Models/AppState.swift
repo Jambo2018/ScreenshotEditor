@@ -72,6 +72,43 @@ final class EditorShellState: ObservableObject {
     @Published var isColorPickingMode = false
 }
 
+enum AppTestHarness: Equatable {
+    enum UITestScenario: String, Equatable {
+        case empty
+        case editing
+    }
+
+    case live
+    case unitTests
+    case uiTests(UITestScenario)
+
+    static func detectFromProcessInfo() -> AppTestHarness {
+        let processInfo = ProcessInfo.processInfo
+
+        if processInfo.environment["XCTestConfigurationFilePath"] != nil,
+           !processInfo.arguments.contains("--uitesting") {
+            return .unitTests
+        }
+
+        if processInfo.arguments.contains("--uitesting") {
+            let scenario = UITestScenario(rawValue: processInfo.environment["SCREENSHOTEDITOR_UI_TEST_SCENARIO"] ?? "")
+                ?? .empty
+            return .uiTests(scenario)
+        }
+
+        return .live
+    }
+
+    var bypassesSystemPresentations: Bool {
+        switch self {
+        case .live:
+            return false
+        case .unitTests, .uiTests:
+            return true
+        }
+    }
+}
+
 class AppState: ObservableObject {
     // MARK: - Published Properties
 
@@ -83,6 +120,7 @@ class AppState: ObservableObject {
     let intake = ImportCaptureState()
     let shell = EditorShellState()
     private var cancellables = Set<AnyCancellable>()
+    private let testHarness: AppTestHarness
 
     // Screen capture
     #if os(macOS)
@@ -334,10 +372,10 @@ class AppState: ObservableObject {
 
     // MARK: - Initialization
 
-    init() {
+    init(testHarness: AppTestHarness = .detectFromProcessInfo()) {
+        self.testHarness = testHarness
         bindChildState()
-        loadFromiCloud()
-        setupHotKey()
+        configureInitialState()
     }
 
     private func bindChildState() {
@@ -360,6 +398,35 @@ class AppState: ObservableObject {
         shell.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
+    }
+
+    private func configureInitialState() {
+        switch testHarness {
+        case .live:
+            loadFromiCloud()
+            setupHotKey()
+        case .unitTests:
+            break
+        case .uiTests(let scenario):
+            applyUITestScenario(scenario)
+        }
+    }
+
+    private func applyUITestScenario(_ scenario: AppTestHarness.UITestScenario) {
+        switch scenario {
+        case .empty:
+            break
+        case .editing:
+            backgroundType = .color
+            selectedGradient = .violet
+            padding = 36
+            cornerRadius = 18
+            blurAmount = 12
+            deviceFrame = .iphone
+            exportAspectRatio = .portrait34
+            autoCopyToClipboard = false
+            setCurrentScreenshot(makeTestScreenshot(name: "UITest-Editing"))
+        }
     }
 
     // MARK: - Screen Capture Setup
@@ -533,6 +600,11 @@ class AppState: ObservableObject {
     }
 
     func requestScreenCapture() {
+        if case .uiTests = testHarness {
+            setCurrentScreenshot(makeTestScreenshot(name: "UITest-Capture"))
+            return
+        }
+
         #if os(macOS)
         startScreenCapture()
         #else
@@ -541,6 +613,11 @@ class AppState: ObservableObject {
     }
 
     func requestPhotoImport() {
+        if case .uiTests = testHarness {
+            setCurrentScreenshot(makeTestScreenshot(name: "UITest-Photo"))
+            return
+        }
+
         #if os(iOS)
         isPhotoPickerPresented = true
         #else
@@ -549,6 +626,11 @@ class AppState: ObservableObject {
     }
 
     func requestImageImport() {
+        if case .uiTests = testHarness {
+            setCurrentScreenshot(makeTestScreenshot(name: "UITest-Import"))
+            return
+        }
+
         #if os(macOS)
         importScreenshot()
         #else
@@ -653,6 +735,46 @@ class AppState: ObservableObject {
         return PlatformImage.from(cgImage: cgImage)
     }
 
+    private func makeTestScreenshot(name: String) -> Screenshot {
+        Screenshot(
+            id: UUID(),
+            name: name,
+            sourceURL: nil,
+            createdAt: Date(),
+            image: makeTestImage()
+        )
+    }
+
+    private func makeTestImage(size: CGSize = CGSize(width: 1320, height: 860)) -> PlatformImage {
+        #if os(macOS)
+        let image = NSImage(size: NSSize(width: size.width, height: size.height))
+        image.lockFocus()
+        NSColor(calibratedRed: 0.16, green: 0.45, blue: 0.90, alpha: 1).setFill()
+        NSBezierPath(rect: NSRect(origin: .zero, size: image.size)).fill()
+
+        NSColor.white.withAlphaComponent(0.12).setFill()
+        NSBezierPath(
+            roundedRect: NSRect(x: 80, y: 140, width: size.width - 160, height: size.height - 280),
+            xRadius: 28,
+            yRadius: 28
+        ).fill()
+        image.unlockFocus()
+        return image
+        #else
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { context in
+            UIColor(red: 0.16, green: 0.45, blue: 0.90, alpha: 1).setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+
+            UIColor.white.withAlphaComponent(0.12).setFill()
+            UIBezierPath(
+                roundedRect: CGRect(x: 80, y: 140, width: size.width - 160, height: size.height - 280),
+                cornerRadius: 28
+            ).fill()
+        }
+        #endif
+    }
+
     func setCurrentScreenshot(_ screenshot: Screenshot) {
         screenshots = [screenshot]
         selectedScreenshotId = screenshot.id
@@ -669,6 +791,17 @@ class AppState: ObservableObject {
             return
         }
 
+        if testHarness.bypassesSystemPresentations {
+            do {
+                _ = try renderedImageData(sourceImage: image, format: format)
+                isExporting = false
+                errorMessage = "UITest export prepared"
+            } catch {
+                errorMessage = "Export failed: \(error.localizedDescription)"
+            }
+            return
+        }
+
         print("[Export] Starting export from AppState")
         print("[Export] Background: \(backgroundType.rawValue), Gradient: \(selectedGradient.name)")
         print("[Export] Settings: blur=\(blurAmount), padding=\(padding), corner=\(cornerRadius)")
@@ -682,6 +815,21 @@ class AppState: ObservableObject {
         guard let screenshot = selectedScreenshot,
               let image = screenshot.image else {
             errorMessage = "No screenshot selected"
+            return
+        }
+
+        if testHarness.bypassesSystemPresentations {
+            do {
+                let data = try renderedImageData(sourceImage: image, format: format)
+                _ = try writeTemporaryShareFile(
+                    data: data,
+                    baseName: screenshot.name.isEmpty ? "UITest-Share" : screenshot.name,
+                    format: format
+                )
+                errorMessage = "UITest share prepared"
+            } catch {
+                errorMessage = "Share failed: \(error.localizedDescription)"
+            }
             return
         }
 

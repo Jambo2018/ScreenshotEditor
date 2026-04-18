@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.19.0] - 2026-04-18
+
+### Added
+- Added a shared Xcode scheme plus test-harness hooks so automated workflows can seed empty/editing scenarios, bypass system sheets, and exercise export/share flows deterministically.
+- Added regression coverage for render sizing parity, aspect-ratio handling, workflow state seeding, compact device metrics, and pinned-window lifecycle behavior.
+
+### Changed
+- Reworked the previous XCTest UI-flow coverage into stable harness-backed workflow tests that validate import → edit → export/share transitions inside the existing test target.
+- Hardened PinWindowManager test cleanup with explicit testing reset helpers and main-actor execution so AppKit window tests stop leaking state between cases.
+
+### Verified
+- Verified the macOS regression suite with `xcodebuild test`.
+- Verified the shared iPhone/iPad target compiles with a generic iOS build (`CODE_SIGNING_ALLOWED=NO`).
+
 ## [0.1.18.0] - 2026-04-18
 
 ### Added

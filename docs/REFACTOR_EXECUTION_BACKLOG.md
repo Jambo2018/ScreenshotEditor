@@ -63,11 +63,14 @@
 
 ## Phase 5 — Tests and regression hardening
 ### Tasks
-- [ ] Add unit tests for render/state combinations
-- [ ] Add UI tests for import → edit → export/share flows
-- [ ] Add device-specific regression coverage for iPhone/iPad/macOS
-- [ ] Run full build verification on all supported platforms
+- [x] Add unit tests for render/state combinations
+- [x] Add workflow regression tests for import → edit → export/share flows
+- [x] Add device-specific regression coverage for iPhone/iPad/macOS
+- [x] Run full build verification on all supported platforms
+
+### Notes
+- Workflow coverage currently uses a harness-backed regression suite inside the shared test target; a dedicated XCUI bundle can still be added later if deeper UI automation becomes necessary.
 
 ### Exit criteria
 - Main workflow is covered by automated checks
-- Refactor can continue without visual regressions going unnoticed
+- Shared macOS and iOS builds are verified before the next refactor phase

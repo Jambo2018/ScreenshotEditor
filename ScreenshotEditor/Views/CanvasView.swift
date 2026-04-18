@@ -235,18 +235,20 @@ struct CanvasActionBar: View {
     private var captureButton: some View {
         if style == .large {
             #if os(iOS)
-            compactWelcomeButton(title: "截图", systemImage: "camera.viewfinder", prominent: true, action: appState.requestScreenCapture)
+            compactWelcomeButton(title: "截图", systemImage: "camera.viewfinder", prominent: true, accessibilityIdentifier: "canvas.capture", action: appState.requestScreenCapture)
             #else
             Button(action: { appState.requestScreenCapture() }) {
                 Label("截图", systemImage: "camera.viewfinder")
             }
             .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("canvas.capture")
             #endif
         } else {
             Button(action: { appState.requestScreenCapture() }) {
                 Label("截图", systemImage: "camera.viewfinder")
             }
             .buttonStyle(.bordered)
+            .accessibilityIdentifier("canvas.capture")
         }
     }
 
@@ -254,12 +256,13 @@ struct CanvasActionBar: View {
     private var photoButtonIfNeeded: some View {
         #if os(iOS)
         if style == .large {
-            compactWelcomeButton(title: "照片", systemImage: "photo.on.rectangle", prominent: false, action: appState.requestPhotoImport)
+            compactWelcomeButton(title: "照片", systemImage: "photo.on.rectangle", prominent: false, accessibilityIdentifier: "canvas.photo", action: appState.requestPhotoImport)
         } else {
             Button(action: { appState.requestPhotoImport() }) {
                 Label("照片", systemImage: "photo.on.rectangle")
             }
             .buttonStyle(.bordered)
+            .accessibilityIdentifier("canvas.photo")
         }
         #endif
     }
@@ -268,23 +271,25 @@ struct CanvasActionBar: View {
     private var importButton: some View {
         if style == .large {
             #if os(iOS)
-            compactWelcomeButton(title: "导入", systemImage: "square.and.arrow.down", prominent: false, action: appState.requestImageImport)
+            compactWelcomeButton(title: "导入", systemImage: "square.and.arrow.down", prominent: false, accessibilityIdentifier: "canvas.import", action: appState.requestImageImport)
             #else
             Button(action: { appState.requestImageImport() }) {
                 Label("导入图片", systemImage: "square.and.arrow.down")
             }
             .buttonStyle(.bordered)
+            .accessibilityIdentifier("canvas.import")
             #endif
         } else {
             Button(action: { appState.requestImageImport() }) {
                 Label("导入图片", systemImage: "square.and.arrow.down")
             }
             .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("canvas.import")
         }
     }
 
     @ViewBuilder
-    private func compactWelcomeButton(title: String, systemImage: String, prominent: Bool, action: @escaping () -> Void) -> some View {
+    private func compactWelcomeButton(title: String, systemImage: String, prominent: Bool, accessibilityIdentifier: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 5) {
                 Image(systemName: systemImage)
@@ -301,6 +306,7 @@ struct CanvasActionBar: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
 
@@ -371,6 +377,7 @@ struct EditingBottomBar: View {
                     title: "截图",
                     systemImage: "camera.viewfinder",
                     prominent: false,
+                    accessibilityIdentifier: "toolbar.capture",
                     action: appState.requestScreenCapture
                 )
             }
@@ -380,6 +387,7 @@ struct EditingBottomBar: View {
                 title: "照片",
                 systemImage: "photo.on.rectangle",
                 prominent: false,
+                accessibilityIdentifier: "toolbar.photo",
                 action: appState.requestPhotoImport
             )
             #endif
@@ -388,6 +396,7 @@ struct EditingBottomBar: View {
                 title: "导入",
                 systemImage: "square.and.arrow.down",
                 prominent: true,
+                accessibilityIdentifier: "toolbar.import",
                 action: appState.requestImageImport
             )
 
@@ -446,7 +455,7 @@ struct EditingBottomBar: View {
         deviceClass.bottomBarSeparatorHeight
     }
 
-    private func actionButton(title: String, systemImage: String, prominent: Bool, action: @escaping () -> Void) -> some View {
+    private func actionButton(title: String, systemImage: String, prominent: Bool, accessibilityIdentifier: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: buttonIconSpacing) {
                 Image(systemName: systemImage)
@@ -464,6 +473,7 @@ struct EditingBottomBar: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 
     private func toolButton(_ tool: AnnotationTool) -> some View {
@@ -503,6 +513,7 @@ struct EditingBottomBar: View {
         }
         .buttonStyle(.plain)
         .help(tool.title)
+        .accessibilityIdentifier("tool.\(tool.rawValue)")
     }
 
     private var actionTitleSize: CGFloat {

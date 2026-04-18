@@ -207,6 +207,19 @@ class PinWindowManager {
         #endif
     }
 
+
+    #if DEBUG
+    func resetForTesting() {
+        for pin in activePins.values {
+            pin.onClose = nil
+            pin.orderOut(nil)
+            pin.contentView = nil
+        }
+        activePins.removeAll()
+        pinGroups.removeAll()
+    }
+    #endif
+
     // MARK: - Persistence
 
     /// Save current workspace (pins and groups)

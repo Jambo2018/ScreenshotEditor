@@ -8,6 +8,7 @@
 import XCTest
 @testable import ScreenshotEditor
 
+@MainActor
 final class PinWindowManagerTests: XCTestCase {
 
     var manager: PinWindowManager!
@@ -17,15 +18,23 @@ final class PinWindowManagerTests: XCTestCase {
         try await super.setUp()
         manager = PinWindowManager.shared
         testImage = createTestImage()
-        // Clean up any existing pins
-        manager.closeAllPins()
+        manager.resetForTesting()
     }
 
     override func tearDown() async throws {
-        manager.closeAllPins()
+        manager.resetForTesting()
         manager = nil
         testImage = nil
         try await super.tearDown()
+    }
+
+    private func waitForActivePins(count expectedCount: Int, timeout: TimeInterval = 1.0, file: StaticString = #filePath, line: UInt = #line) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while manager.activePins.count != expectedCount && Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+
+        XCTAssertEqual(manager.activePins.count, expectedCount, file: file, line: line)
     }
 
     // MARK: - Singleton Tests
@@ -39,18 +48,22 @@ final class PinWindowManagerTests: XCTestCase {
     // MARK: - Pin Creation Tests
 
     func testCreatePin() {
-        let pinId = manager.createPin(image: testImage)
+        guard let pinId = manager.createPin(image: testImage) else {
+            XCTFail("Should return a pin ID")
+            return
+        }
 
-        XCTAssertNotNil(pinId, "Should return a pin ID")
         XCTAssertEqual(manager.activePins.count, 1, "Should have 1 active pin")
         XCTAssertNotNil(manager.activePins[pinId], "Pin should exist in active pins")
     }
 
     func testCreatePinWithPosition() {
         let position = CGPoint(x: 100, y: 200)
-        let pinId = manager.createPin(image: testImage, position: position)
+        guard let pinId = manager.createPin(image: testImage, position: position) else {
+            XCTFail("Pin should exist")
+            return
+        }
 
-        XCTAssertNotNil(pinId)
         guard let pin = manager.activePins[pinId] else {
             XCTFail("Pin should exist")
             return
@@ -62,17 +75,24 @@ final class PinWindowManagerTests: XCTestCase {
 
     func testCreatePinWithGroup() {
         let groupName = "TestGroup"
-        let pinId = manager.createPin(image: testImage, position: nil, group: groupName)
+        guard let pinId = manager.createPin(image: testImage, position: nil, group: groupName) else {
+            XCTFail("Pin should exist")
+            return
+        }
 
-        XCTAssertNotNil(pinId)
         let pinsInGroup = manager.pinsInGroup(groupName)
         XCTAssertTrue(pinsInGroup.contains(pinId), "Pin should be in the group")
     }
 
     func testCreateMultiplePins() {
-        let pin1 = manager.createPin(image: testImage)
-        let pin2 = manager.createPin(image: testImage)
-        let pin3 = manager.createPin(image: testImage)
+        guard
+            let pin1 = manager.createPin(image: testImage),
+            let pin2 = manager.createPin(image: testImage),
+            let pin3 = manager.createPin(image: testImage)
+        else {
+            XCTFail("Pins should exist")
+            return
+        }
 
         XCTAssertEqual(manager.activePins.count, 3, "Should have 3 active pins")
         XCTAssertNotNil(manager.activePins[pin1])
@@ -83,10 +103,14 @@ final class PinWindowManagerTests: XCTestCase {
     // MARK: - Pin Closure Tests
 
     func testClosePin() {
-        let pinId = manager.createPin(image: testImage)
+        guard let pinId = manager.createPin(image: testImage) else {
+            XCTFail("Pin should exist")
+            return
+        }
         XCTAssertEqual(manager.activePins.count, 1)
 
         manager.closePin(id: pinId)
+        waitForActivePins(count: 0)
 
         XCTAssertEqual(manager.activePins.count, 0, "Pin should be removed")
         XCTAssertNil(manager.activePins[pinId], "Pin should not exist after closing")
@@ -105,17 +129,23 @@ final class PinWindowManagerTests: XCTestCase {
 
         XCTAssertEqual(manager.activePins.count, 3)
 
-        manager.closeAllPins()
+        manager.resetForTesting()
 
         XCTAssertEqual(manager.activePins.count, 0, "All pins should be closed")
     }
 
     func testCloseOtherPins() {
-        let pin1 = manager.createPin(image: testImage)
-        let pin2 = manager.createPin(image: testImage)
-        let pin3 = manager.createPin(image: testImage)
+        guard
+            let pin1 = manager.createPin(image: testImage),
+            let pin2 = manager.createPin(image: testImage),
+            let pin3 = manager.createPin(image: testImage)
+        else {
+            XCTFail("Pins should exist")
+            return
+        }
 
         manager.closeOtherPins(except: pin2)
+        waitForActivePins(count: 1)
 
         XCTAssertEqual(manager.activePins.count, 1, "Only one pin should remain")
         XCTAssertNotNil(manager.activePins[pin2], " pin2 should remain")
@@ -126,7 +156,10 @@ final class PinWindowManagerTests: XCTestCase {
     // MARK: - Group Management Tests
 
     func testAddToGroup() {
-        let pinId = manager.createPin(image: testImage)
+        guard let pinId = manager.createPin(image: testImage) else {
+            XCTFail("Pin should exist")
+            return
+        }
         let groupName = "TestGroup"
 
         manager.addToGroup(groupName, pinId: pinId)
@@ -136,7 +169,10 @@ final class PinWindowManagerTests: XCTestCase {
     }
 
     func testRemoveFromGroup() {
-        let pinId = manager.createPin(image: testImage)
+        guard let pinId = manager.createPin(image: testImage) else {
+            XCTFail("Pin should exist")
+            return
+        }
         let groupName = "TestGroup"
 
         manager.addToGroup(groupName, pinId: pinId)
@@ -147,9 +183,14 @@ final class PinWindowManagerTests: XCTestCase {
     }
 
     func testMultiplePinsInGroup() {
-        let pin1 = manager.createPin(image: testImage)
-        let pin2 = manager.createPin(image: testImage)
-        let pin3 = manager.createPin(image: testImage)
+        guard
+            let pin1 = manager.createPin(image: testImage),
+            let pin2 = manager.createPin(image: testImage),
+            let pin3 = manager.createPin(image: testImage)
+        else {
+            XCTFail("Pins should exist")
+            return
+        }
 
         let groupName = "MultiPinGroup"
         manager.addToGroup(groupName, pinId: pin1)
@@ -161,7 +202,10 @@ final class PinWindowManagerTests: XCTestCase {
     }
 
     func testHideAndShowGroup() {
-        let pinId = manager.createPin(image: testImage)
+        guard let pinId = manager.createPin(image: testImage) else {
+            XCTFail("Pin should exist")
+            return
+        }
         let groupName = "VisibilityGroup"
 
         manager.addToGroup(groupName, pinId: pinId)
@@ -179,7 +223,10 @@ final class PinWindowManagerTests: XCTestCase {
     }
 
     func testToggleGroup() {
-        let pinId = manager.createPin(image: testImage)
+        guard let pinId = manager.createPin(image: testImage) else {
+            XCTFail("Pin should exist")
+            return
+        }
         let groupName = "ToggleGroup"
 
         manager.addToGroup(groupName, pinId: pinId)
@@ -197,12 +244,16 @@ final class PinWindowManagerTests: XCTestCase {
     }
 
     func testGroupCleanupAfterPinClose() {
-        let pinId = manager.createPin(image: testImage)
+        guard let pinId = manager.createPin(image: testImage) else {
+            XCTFail("Pin should exist")
+            return
+        }
         let groupName = "CleanupGroup"
 
         manager.addToGroup(groupName, pinId: pinId)
 
         manager.closePin(id: pinId)
+        waitForActivePins(count: 0)
 
         let pins = manager.pinsInGroup(groupName)
         XCTAssertTrue(pins.isEmpty, "Group should be empty after pin is closed")
@@ -220,13 +271,17 @@ final class PinWindowManagerTests: XCTestCase {
         XCTAssertEqual(manager.activePinCount, 2)
 
         manager.closeAllPins()
+        waitForActivePins(count: 0)
         XCTAssertEqual(manager.activePinCount, 0)
     }
 
     func testGroupCount() {
         XCTAssertEqual(manager.groupCount, 0, "Should start with 0 groups")
 
-        let pinId = manager.createPin(image: testImage)
+        guard let pinId = manager.createPin(image: testImage) else {
+            XCTFail("Pin should exist")
+            return
+        }
         manager.addToGroup("Group1", pinId: pinId)
         XCTAssertEqual(manager.groupCount, 1)
 

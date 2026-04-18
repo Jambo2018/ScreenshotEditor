@@ -273,6 +273,7 @@ private struct InlineCompactControlPanel: View {
         .buttonStyle(.plain)
         .disabled(!appState.hasScreenshot || isExporting)
         .opacity((!appState.hasScreenshot || isExporting) ? 0.55 : 1)
+        .accessibilityIdentifier("editor.export.inline")
     }
 
     private func selectPreset(_ preset: GradientPreset) {
@@ -738,6 +739,7 @@ struct ExportSection: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!appState.hasScreenshot || isExporting)
+                .accessibilityIdentifier("editor.export.sidebar")
             }
         }
     }

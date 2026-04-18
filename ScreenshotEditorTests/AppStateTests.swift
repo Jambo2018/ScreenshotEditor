@@ -14,7 +14,7 @@ final class AppStateTests: XCTestCase {
 
     override func setUp() async throws {
         try await super.setUp()
-        appState = AppState()
+        appState = AppState(testHarness: .unitTests)
     }
 
     override func tearDown() async throws {
@@ -83,7 +83,60 @@ final class AppStateTests: XCTestCase {
         appState.customAspectRatioWidth = 4
         appState.customAspectRatioHeight = 5
 
-        XCTAssertEqual(appState.resolvedAspectRatioValue, 4.0 / 5.0, accuracy: 0.0001)
+        XCTAssertEqual(appState.resolvedAspectRatioValue ?? 0, 4.0 / 5.0, accuracy: 0.0001)
+    }
+
+    func testUITestEditingScenarioSeedsScreenshotAndEditorState() {
+        let uiState = AppState(testHarness: .uiTests(.editing))
+
+        XCTAssertTrue(uiState.hasScreenshot)
+        XCTAssertEqual(uiState.backgroundType, .color)
+        XCTAssertEqual(uiState.selectedGradient, .violet)
+        XCTAssertEqual(uiState.deviceFrame, .iphone)
+        XCTAssertEqual(uiState.exportAspectRatio, .portrait34)
+        XCTAssertEqual(uiState.padding, 36)
+        XCTAssertEqual(uiState.cornerRadius, 18)
+        XCTAssertEqual(uiState.blurAmount, 12)
+        XCTAssertFalse(uiState.autoCopyToClipboard)
+    }
+
+    func testUITestImportRequestSeedsScreenshotWithoutShowingSystemImporter() {
+        let uiState = AppState(testHarness: .uiTests(.empty))
+
+        XCTAssertFalse(uiState.hasScreenshot)
+
+        uiState.requestImageImport()
+
+        XCTAssertTrue(uiState.hasScreenshot)
+        XCTAssertEqual(uiState.selectedScreenshot?.name, "UITest-Import")
+        XCTAssertFalse(uiState.isImportPickerPresented)
+    }
+
+    func testAutomationHarnessExportReturnsConfirmationMessage() {
+        let uiState = AppState(testHarness: .uiTests(.editing))
+
+        uiState.exportCurrent()
+
+        XCTAssertEqual(uiState.errorMessage, "UITest export prepared")
+        XCTAssertFalse(uiState.isExporting)
+    }
+
+    func testAutomationHarnessShareReturnsConfirmationMessage() {
+        let uiState = AppState(testHarness: .uiTests(.editing))
+
+        uiState.shareCurrent()
+
+        XCTAssertEqual(uiState.errorMessage, "UITest share prepared")
+    }
+
+    func testEditorDeviceClassSizingRemainsDistinctAcrossPlatforms() {
+        XCTAssertEqual(EditorDeviceClass.phone.topBarButtonSide, 28)
+        XCTAssertEqual(EditorDeviceClass.tablet.topBarButtonSide, 30)
+        XCTAssertEqual(EditorDeviceClass.desktop.topBarButtonSide, 32)
+
+        XCTAssertLessThan(EditorDeviceClass.phone.bottomBarHorizontalPadding, EditorDeviceClass.desktop.bottomBarHorizontalPadding)
+        XCTAssertNotNil(EditorDeviceClass.tablet.workspaceSectionWidth)
+        XCTAssertEqual(EditorDeviceClass.desktop.workspaceSectionWidth, 332)
     }
 
     private func makeScreenshot(name: String) -> Screenshot {

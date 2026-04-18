@@ -348,6 +348,7 @@ private struct EditorTopBar: View {
             .buttonStyle(.plain)
             .disabled(!appState.hasScreenshot || appState.isExporting)
             .accessibilityLabel("分享")
+            .accessibilityIdentifier("editor.share")
         }
         .padding(layout.padding)
         .background(Color.editorPanelBackground.opacity(EditorOpacity.toolbar))
@@ -856,6 +857,7 @@ private struct CompactOutputSection: View {
         .buttonStyle(.plain)
         .disabled(!appState.hasScreenshot || isExporting)
         .opacity((!appState.hasScreenshot || isExporting) ? 0.55 : 1)
+        .accessibilityIdentifier("editor.export")
     }
 
     private func export() {
@@ -934,6 +936,7 @@ struct ToolbarShareButton: NSViewRepresentable {
         button.target = context.coordinator
         button.action = #selector(Coordinator.didPressShare(_:))
         button.toolTip = "Share to other apps"
+        button.setAccessibilityIdentifier("editor.share")
         return button
     }
 
