@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.14.0] - 2026-04-18
+
+### Added
+- Added a Phase 0 refactor audit document that records the current product, architecture, and mobile adaptation problems before implementation work begins.
+- Added a staged refactor backlog that defines deliverables and exit criteria for information architecture, state decomposition, multi-platform UI rebuild, design tokens, and regression coverage.
+
 ## [0.1.13.0] - 2026-04-12
 
 ### Changed
